@@ -1,0 +1,79 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 98%;
+    --foreground: 240 21% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 21% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 21% 11%;
+
+    --primary: 25 90% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 240 21% 11%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 240 5% 45%;
+
+    --accent: 25 90% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 25 90% 55%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 240 21% 11%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 25 90% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 21% 15%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 21% 18%;
+    --sidebar-ring: 25 90% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .container-custom {
+    @apply container max-w-7xl mx-auto px-4 md:px-6;
+  }
+  
+  .btn-primary {
+    @apply bg-eliteOrange hover:bg-eliteOrange-light text-white font-medium py-2 px-4 rounded transition-colors duration-200;
+  }
+  
+  .section-title {
+    @apply text-3xl md:text-4xl font-bold mb-6 text-eliteBlue;
+  }
+  
+  .section-subtitle {
+    @apply text-xl text-muted-foreground mb-10;
+  }
+  
+  .property-card {
+    @apply bg-white rounded-lg overflow-hidden transition-all duration-200 hover:shadow-lg hover:shadow-eliteOrange/10;
+  }
+}

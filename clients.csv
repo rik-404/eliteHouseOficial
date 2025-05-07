@@ -1,0 +1,3 @@
+id,name,cpf,email,phone,cep,street,number,neighborhood,city,state,complement,status,broker_id,notes,created_at,updated_at
+5867c0e5-ab1a-439c-a62d-5e99f003b535,"Ricardo ",4881658124,ricardo@email.com,1998231694,13403026,rua,4,a,a,sp,,Novo,3a805162-5c46-4087-a5a4-075585af3eec,,2025-05-07 02:32:04.163588+00,2025-05-07 02:32:04.163588+00
+fa1d0125-48c8-42e4-9467-3c84d6244c33,pabullo,48816581824,pabullo@gmail.com,196487514523,13403026,Rua Rafael Marques Coutinho,457,Jaraguá,Piracicaba,SP,,Novo,3a805162-5c46-4087-a5a4-075585af3eec,,2025-05-07 02:33:37.267733+00,2025-05-07 02:33:37.267733+00
