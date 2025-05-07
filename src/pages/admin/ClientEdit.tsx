@@ -106,16 +106,35 @@ const ClientEdit = () => {
     }
 
     try {
+      // Preparar os dados para atualização
+      const updateData = {
+        name: client?.name,
+        email: client?.email,
+        phone: client?.phone,
+        cpf: client?.cpf,
+        cep: client?.cep,
+        street: client?.street,
+        number: client?.number,
+        neighborhood: client?.neighborhood,
+        city: client?.city,
+        state: client?.state,
+        complement: client?.complement,
+        broker_id: client?.broker_id,
+        status: status,
+        updated_at: new Date().toISOString()
+      };
+
+      // Remover campos undefined
+      const cleanData = Object.fromEntries(
+        Object.entries(updateData).filter(([_, value]) => value !== undefined)
+      );
+
       // Se for dev, pode editar qualquer cliente
       if (user?.role === 'dev') {
         const { error: updateError } = await supabase
           .from('clients')
-          .update({
-            ...client,
-            status: status,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', client.id);
+          .update(cleanData)
+          .eq('id', client!.id);
 
         if (updateError) {
           throw updateError;
@@ -127,12 +146,8 @@ const ClientEdit = () => {
         // Admin pode editar qualquer cliente
         const { error: updateError } = await supabase
           .from('clients')
-          .update({
-            ...client,
-            status: status,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', client.id);
+          .update(cleanData)
+          .eq('id', client!.id);
 
         if (updateError) {
           throw updateError;
