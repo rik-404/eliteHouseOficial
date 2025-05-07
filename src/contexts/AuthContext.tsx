@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import bcrypt from 'bcryptjs';
+
 
 import { User } from '@/types/user';
 
@@ -47,8 +47,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       console.log('Usuário encontrado:', userData);
 
-      // Verify password using bcrypt
-      const isValidPassword = await bcrypt.compare(password, userData.password);
+      const isValidPassword = password === userData.password;
       
       if (!isValidPassword) {
         console.log('Senha inválida');
@@ -89,7 +88,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (fetchError) throw fetchError;
       
-      const isValid = await bcrypt.compare(password, userData.password);
+      const isValid = password === userData.password;
       return isValid;
     } catch (error) {
       console.error('Erro ao verificar senha:', error);

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { User } from '@/types/user';
 import { supabase } from '@/lib/supabase';
-import bcrypt from 'bcryptjs';
+
 
 interface ProfileForm extends Omit<User, 'password'> {
   currentPassword?: string;
@@ -78,7 +78,7 @@ const Profile = () => {
 
       if (formData.newPassword) {
         // Criptografar a nova senha
-        const hashedPassword = await bcrypt.hash(formData.newPassword, 10);
+        const hashedPassword = formData.newPassword;
         updateData.password = hashedPassword;
       }
 

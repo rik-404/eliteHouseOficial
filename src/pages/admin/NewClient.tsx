@@ -5,11 +5,45 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import { Client } from '../../types/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useNavigate } from 'react-router-dom';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+
+interface ViaCEPResponse {
+  cep: string;
+  logradouro: string;
+  bairro: string;
+  localidade: string;
+  uf: string;
+  erro?: boolean;
+}
+
+type ClientStatus = 'Novo' | 'Atendimento' | 'Análise documental' | 'Análise bancária' | 'Aprovado' | 'Condicionado' | 'Reprovado' | 'Venda realizada' | 'Distrato';
+
+interface Client {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  cpf: string;
+  cep: string;
+  street: string;
+  number: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  complement: string;
+  broker_id: string;
+  status: ClientStatus;
+  notes: string;
+}
 
 const NewClient = () => {
-  const [client, setClient] = useState<Client>({
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Inicializar o estado do cliente com o broker_id do usuário corretor
+  const initialClient: Client = {
     id: '',
     name: '',
     email: '',
@@ -22,29 +56,72 @@ const NewClient = () => {
     city: '',
     state: '',
     complement: '',
-    broker_id: '',
-    status: 'Novo' as 'Novo' | 'Atendimento' | 'Análise documental' | 'Análise bancária' | 'Aprovado' | 'Condicionado' | 'Reprovado' | 'Venda realizada' | 'Distrato',
-    notes: '',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  });
+    broker_id: user?.role === 'corretor' ? user.broker_id : '',
+    status: 'Novo' as ClientStatus,
+    notes: ''
+  };
+
+  const [client, setClient] = useState<Client>(initialClient);
   const [brokers, setBrokers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
+  const [noBrokers, setNoBrokers] = useState(false);
+
+  const handleCEPChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const cep = e.target.value.replace(/\D/g, ''); // Remove caracteres não numéricos
+    setClient(prev => ({ ...prev, cep }));
+
+    if (cep.length === 8) {
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const data = await response.json() as ViaCEPResponse;
+
+        if (data.erro) {
+          setError('CEP não encontrado');
+          return;
+        }
+
+        setClient(prev => ({
+          ...prev,
+          street: data.logradouro,
+          neighborhood: data.bairro,
+          city: data.localidade,
+          state: data.uf
+        }));
+        setError(null);
+      } catch (err) {
+        console.error('Erro ao buscar CEP:', err);
+        setError('Erro ao buscar informações do CEP');
+      }
+    } else {
+      setError(null);
+    }
+  };
 
   useEffect(() => {
     const fetchBrokers = async () => {
       try {
+        setLoading(true);
         const { data, error } = await supabase
           .from('users')
-          .select('id, name')
-          .eq('role', 'broker');
+          .select('id, name, broker_id')
+          .eq('role', 'corretor')
+          .order('name');
 
         if (error) throw error;
-        setBrokers(data || []);
+        
+        // Filtra apenas os usuários que têm broker_id
+        const validBrokers = data?.filter((user: any) => user.broker_id) || [];
+        setBrokers(validBrokers);
+        
+        if (validBrokers.length === 0) {
+          setNoBrokers(true);
+        }
       } catch (err) {
-        console.error(err);
+        console.error('Erro ao carregar corretores:', err);
+        setError('Erro ao carregar lista de corretores');
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -57,25 +134,81 @@ const NewClient = () => {
     setError(null);
 
     try {
+      console.log('Dados do cliente antes da validação:', client);
+      
+      // Removemos os campos criado_at e updated_at para que o Supabase gere automaticamente
+      const clientData = {
+        name: client.name,
+        cpf: client.cpf,
+        email: client.email,
+        phone: client.phone,
+        cep: client.cep,
+        street: client.street,
+        number: client.number,
+        neighborhood: client.neighborhood,
+        city: client.city,
+        state: client.state,
+        complement: client.complement,
+        broker_id: client.broker_id,
+        status: client.status,
+        notes: client.notes
+      };
+
+      // Verifica se o broker_id é um UUID válido
+      if (!clientData.broker_id) {
+        throw new Error('Por favor, selecione um corretor');
+      }
+
+      if (!clientData.broker_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        throw new Error('Por favor, selecione um corretor válido');
+      }
+
+      // Adiciona o broker_id só se for válido
+      clientData.broker_id = client.broker_id;
+
       const { data, error } = await supabase
         .from('clients')
-        .insert([client])
+        .insert([{
+          ...clientData,
+          broker_id: client.broker_id
+        }])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505') { // Código de erro do PostgreSQL para violação de unicidade
+          // Verifica se o erro é sobre email ou CPF
+          if (error.message.includes('clients_email_key')) {
+            setError('Email já cadastrado. Por favor, use um email diferente.');
+          } else if (error.message.includes('clients_cpf_key')) {
+            setError('CPF já cadastrado. Por favor, use um CPF diferente.');
+          } else {
+            setError('Erro ao criar cliente. Por favor, tente novamente.');
+          }
+        } else {
+          setError('Erro ao criar cliente. Por favor, tente novamente.');
+        }
+        return;
+      }
 
-      window.close(); // Fecha a aba atual após criar o cliente
+      // Redireciona para a página de clientes após criar
+      navigate('/admin/clients');
     } catch (err) {
-      setError('Erro ao criar cliente');
-      console.error(err);
+      console.error('Erro ao criar cliente:', err);
+      if (err instanceof Error) {
+        setError(`Erro: ${err.message}`);
+      } else if (typeof err === 'object' && err !== null && 'message' in err) {
+        setError(`Erro: ${err.message}`);
+      } else {
+        setError('Erro ao criar cliente. Por favor, tente novamente.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="p-6">
+    <div className="container mx-auto py-8">
       <Card>
         <CardHeader>
           <CardTitle>Criar Novo Cliente</CardTitle>
@@ -84,7 +217,7 @@ const NewClient = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="name">Nome</Label>
+                <Label htmlFor="name">Nome <span className="text-red-500">*</span></Label>
                 <Input
                   id="name"
                   value={client.name}
@@ -93,7 +226,16 @@ const NewClient = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="cpf">CPF <span className="text-red-500">*</span></Label>
+                <Input
+                  id="cpf"
+                  value={client.cpf}
+                  onChange={(e) => setClient({ ...client, cpf: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
                 <Input
                   id="email"
                   type="email"
@@ -103,7 +245,7 @@ const NewClient = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="phone">Telefone</Label>
+                <Label htmlFor="phone">Telefone <span className="text-red-500">*</span></Label>
                 <Input
                   id="phone"
                   value={client.phone}
@@ -112,31 +254,35 @@ const NewClient = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="cpf">CPF</Label>
-                <Input
-                  id="cpf"
-                  value={client.cpf}
-                  onChange={(e) => setClient({ ...client, cpf: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="broker_id">Corretor</Label>
-                <Select
-                  value={client.broker_id}
-                  onValueChange={(value) => setClient({ ...client, broker_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecionar corretor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {brokers.map((broker) => (
-                      <SelectItem key={broker.id} value={broker.id}>
-                        {broker.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="broker_id">Corretor <span className="text-red-500">*</span></Label>
+                {user?.role === 'corretor' ? (
+                  <div className="text-gray-500">
+                    Corretor: {user?.name || user?.username}
+                  </div>
+                ) : (
+                  <Select
+                    value={client.broker_id}
+                    onValueChange={(value) => setClient({ ...client, broker_id: value })}
+                    required
+                    disabled={loading || noBrokers}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={loading ? 'Carregando corretores...' : noBrokers ? 'Nenhum corretor encontrado' : 'Selecionar corretor'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {brokers.map((broker) => (
+                        <SelectItem key={broker.id} value={broker.broker_id}>
+                          {broker.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                {noBrokers && (
+                  <p className="mt-2 text-sm text-red-500">
+                    Por favor, cadastre um corretor primeiro
+                  </p>
+                )}
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -145,7 +291,8 @@ const NewClient = () => {
                 <Input
                   id="cep"
                   value={client.cep}
-                  onChange={(e) => setClient({ ...client, cep: e.target.value })}
+                  onChange={handleCEPChange}
+                  placeholder="Digite o CEP (apenas números)"
                 />
               </div>
               <div>
@@ -223,7 +370,11 @@ const NewClient = () => {
                 {loading ? 'Criando...' : 'Criar'}
               </Button>
             </div>
-            {error && <div className="text-red-500 mt-2">{error}</div>}
+            {error && (
+              <Alert variant="destructive" className="mt-4">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
           </form>
         </CardContent>
       </Card>

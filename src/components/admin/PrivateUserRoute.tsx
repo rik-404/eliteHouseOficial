@@ -14,17 +14,11 @@ export const PrivateUserRoute = () => {
     </div>;
   }
 
-  if (!user || !user.active) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (user.role === 'corretor') {
+  if (user?.role === 'corretor' && window.location.pathname.includes('/admin/users')) {
     return <Navigate to="/admin/dashboard" replace />;
   }
 
   return (
-    <AdminLayout>
-      <Outlet />
-    </AdminLayout>
+    <AdminLayout />
   );
 };

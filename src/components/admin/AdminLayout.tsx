@@ -5,7 +5,7 @@ import { useNavigate, Link, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
-const AdminLayout = ({ children }: { children: React.ReactNode }) => {
+const AdminLayout = () => {
   const navigate = useNavigate();
   const { user, confirmSignOut } = useAuth();
 
@@ -45,14 +45,12 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                 </Link>
               </li>
             )}
-            {user?.role !== 'corretor' && (
-              <li>
-                <Link to="/admin/clients" className="flex items-center px-4 py-2 text-white hover:bg-[#242434] rounded transition-colors duration-200">
-                  <User className="w-4 h-4 mr-3" />
-                  Clientes
-                </Link>
-              </li>
-            )}
+            <li>
+              <Link to="/admin/clients" className="flex items-center px-4 py-2 text-white hover:bg-[#242434] rounded transition-colors duration-200">
+                <User className="w-4 h-4 mr-3" />
+                Clientes
+              </Link>
+            </li>
           </ul>
         </nav>
       </div>
@@ -97,7 +95,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           </div>
         </header>
         <main className="p-6">
-          {children}
+          <Outlet />
         </main>
       </div>
     </div>

@@ -15,7 +15,7 @@ import { PasswordConfirmationModal } from '@/components/admin/PasswordConfirmati
 const Users = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string | null>(null);
+  const [roleFilter, setRoleFilter] = useState<string | null>('all');
   const [loading, setLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [noPermission, setNoPermission] = useState(false);
@@ -105,16 +105,21 @@ const Users = () => {
     }
   };
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = 
-      user.name?.toLowerCase().includes(search.toLowerCase()) ||
-      user.username?.toLowerCase().includes(search.toLowerCase()) ||
-      user.email?.toLowerCase().includes(search.toLowerCase());
-    
-    const matchesRole = !roleFilter || user.role === roleFilter;
-    
-    return matchesSearch && matchesRole;
-  });
+  const filteredUsers = users.filter(user =>
+    // Desenvolvedores só podem ver corretores
+    (currentUser?.role === 'dev' && user.role === 'corretor') ||
+    // Administradores podem ver todos
+    (currentUser?.role === 'admin') ||
+    // Outros cargos não devem ver nada
+    (currentUser?.role !== 'dev' && currentUser?.role !== 'admin') &&
+    (!roleFilter || roleFilter === 'all' || user.role === roleFilter) &&
+    (search ?
+      user.name.toLowerCase().includes(search.toLowerCase()) ||
+      user.email.toLowerCase().includes(search.toLowerCase()) ||
+      user.phone?.toLowerCase().includes(search.toLowerCase()) ||
+      user.cpf?.toLowerCase().includes(search.toLowerCase())
+    : true)
+  );
 
   return (
     <div className="container mx-auto p-4 space-y-6">
@@ -150,16 +155,18 @@ const Users = () => {
           </div>
         </div>
         <div className="w-48">
-          <Select value={roleFilter} onValueChange={setRoleFilter}>
+          <Select
+            value={roleFilter}
+            onValueChange={setRoleFilter}
+          >
             <SelectTrigger>
-              <SelectValue>
-                {roleFilter ? roleFilter : 'Cargo...'}
-              </SelectValue>
+              <SelectValue placeholder="Filtrar por Cargo" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">Todos os Usuários</SelectItem>
+              <SelectItem value="corretor">Corretor</SelectItem>
               <SelectItem value="admin">Administrador</SelectItem>
               <SelectItem value="dev">Desenvolvedor</SelectItem>
-              <SelectItem value="corretor">Corretor</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -188,9 +195,10 @@ const Users = () => {
                   <Switch
                     checked={user.active}
                     onCheckedChange={(checked) => {
-                      if (currentUser?.role === 'admin' && user.role === 'corretor') {
+                      // Desenvolvedores só podem ativar/desativar corretores
+                      if (currentUser?.role === 'dev' && user.role === 'corretor') {
                         handleToggleActive(user.id, checked);
-                      } else if (currentUser?.role === 'dev') {
+                      } else if (currentUser?.role === 'admin') {
                         handleToggleActive(user.id, checked);
                       } else {
                         setNoPermission(true);
@@ -209,7 +217,7 @@ const Users = () => {
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
-                      onClick={() => navigate(`/admin/users/edit/${user.id}`)}
+                      onClick={() => navigate(`/admin/users/${user.id}/edit`)}
                       className="bg-yellow-500 hover:bg-yellow-600 text-gray-900"
                     >
                       Editar

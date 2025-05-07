@@ -66,7 +66,7 @@ const ClientKanban: React.FC<ClientKanbanProps> = ({ clients, updateClientStatus
   };
 
   const handleEditClient = (clientId: string) => {
-    navigate(`/admin/clients/${clientId}`);
+    navigate(`/admin/clients/${clientId}/edit`);
   };
 
   const renderStatusColumn = (status: string) => {
@@ -118,7 +118,7 @@ const ClientKanban: React.FC<ClientKanbanProps> = ({ clients, updateClientStatus
                                 variant="default"
                                 className="bg-yellow-500 hover:bg-yellow-600 text-white"
                                 size="sm"
-                                onClick={() => navigate(`/admin/clients/${client.id}`)}
+                                onClick={() => navigate(`/admin/clients/${client.id}/edit`)}
                               >
                                 Editar
                               </Button>

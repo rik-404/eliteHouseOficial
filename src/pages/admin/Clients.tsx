@@ -34,6 +34,14 @@ const Clients = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState('');
   const [selectedBroker, setSelectedBroker] = useState<string | null>(null);
+
+  // Função para verificar se o usuário é corretor e encontrar seu broker_id
+  const getBrokerFilter = (user: any) => {
+    if (user?.role === 'corretor') {
+      return user.broker_id;
+    }
+    return null;
+  };
   const [brokers, setBrokers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,10 +61,18 @@ const Clients = () => {
   ];
 
   useEffect(() => {
+    // Configurar o filtro de corretor baseado no usuário
+    if (user?.role === 'corretor') {
+      setSelectedBroker(user.broker_id);
+    }
     fetchClients();
-  }, []);
+  }, [user?.broker_id]);
 
   const handleDelete = (client: Client) => {
+    if (user?.role === 'corretor') {
+      setError('Corretores não podem excluir clientes');
+      return;
+    }
     setClientToDelete(client);
     setDeleteDialogOpen(true);
   };
@@ -105,7 +121,7 @@ const Clients = () => {
   };
 
   const handleEditClient = (clientId: string) => {
-    navigate(`/admin/new-client/${clientId}`);
+    navigate(`/admin/clients/${clientId}/edit`);
   };
 
 
@@ -117,10 +133,17 @@ const Clients = () => {
       console.log('Iniciando busca de dados...');
 
       // Buscar clientes
-      const { data: clientsData, error: clientsError } = await supabase
+      const query = supabase
         .from('clients')
         .select('*')
         .order('id', { ascending: true });
+
+      // Se for corretor, filtrar apenas seus clientes
+      if (user?.role === 'corretor' && user?.broker_id) {
+        query.eq('broker_id', user.broker_id);
+      }
+
+      const { data: clientsData, error: clientsError } = await query;
 
       if (clientsError) throw clientsError;
       console.log('Clientes carregados:', clientsData);
@@ -212,22 +235,28 @@ const Clients = () => {
             {isKanbanView ? 'Ver Lista' : 'Ver Kanban'}
           </Button>
           <div className="flex gap-4">
-            <Select
-              value={selectedBroker || 'all'}
-              onValueChange={setSelectedBroker}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecionar corretor" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Corretores</SelectItem>
-                {brokers.map((broker) => (
-                  <SelectItem key={broker.id} value={broker.id}>
-                    {broker.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {user?.role === 'corretor' ? (
+              <div className="text-gray-500">
+                Corretor: {user?.name || user?.username}
+              </div>
+            ) : (
+              <Select
+                value={selectedBroker || 'all'}
+                onValueChange={setSelectedBroker}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecionar corretor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Corretores</SelectItem>
+                  {brokers.map((broker) => (
+                    <SelectItem key={broker.id} value={broker.id}>
+                      {broker.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <Select
               value={selectedStatus || 'all'}
               onValueChange={setSelectedStatus}
@@ -304,14 +333,28 @@ const Clients = () => {
                             >
                               Editar
                             </Button>
-                            <Button
-                              variant="default"
-                              className="bg-red-500 hover:bg-red-600 text-white"
-                              size="sm"
-                              onClick={() => handleDelete(client)}
-                            >
-                              Excluir
-                            </Button>
+                            {user?.role === 'corretor' ? (
+                              <Button
+                                variant="outline"
+                                className="bg-gray-200 hover:bg-gray-300 text-gray-500 cursor-not-allowed"
+                                size="sm"
+                                onClick={() => {
+                                  setError('Corretores não podem excluir clientes');
+                                  setTimeout(() => setError(null), 3000);
+                                }}
+                              >
+                                Excluir
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="default"
+                                className="bg-red-500 hover:bg-red-600 text-white"
+                                size="sm"
+                                onClick={() => handleDelete(client)}
+                              >
+                                Excluir
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>

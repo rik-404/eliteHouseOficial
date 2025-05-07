@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Client } from '../../types/client';
 interface Broker {
   id: string;
-  broker_id: string;
+  username: string;
   name: string;
   role: string;
 }
@@ -48,6 +48,7 @@ const CreateClient = () => {
     return emailRegex.test(email);
   };
 
+  const { user } = useAuth();
   const [name, setName] = useState('');
   const [cpf, setCpf] = useState('');
   const [email, setEmail] = useState('');
@@ -57,19 +58,56 @@ const CreateClient = () => {
   const [number, setNumber] = useState('');
   const [neighborhood, setNeighborhood] = useState('');
   const [city, setCity] = useState('');
-  const [state, setState] = useState('');
+  const [state, setState] = useState('SP');
   const [complement, setComplement] = useState('');
   const [status, setStatus] = useState('Novo');
+  const [notes, setNotes] = useState('');
   const [broker, setBroker] = useState('');
   const [selectedBroker, setSelectedBroker] = useState<Broker | null>(null);
-  const [notes, setNotes] = useState('');
+  const [brokers, setBrokers] = useState<Broker[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
-  const [brokers, setBrokers] = useState<Broker[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [brokerError, setBrokerError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user?.role === 'corretor') {
+      setBroker(user.username);
+      setSelectedBroker({
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        role: user.role
+      });
+    } else {
+      loadBrokers();
+    }
+  }, [user]);
+
+  const loadBrokers = async () => {
+    try {
+      const { data: brokersData, error } = await supabase
+        .from('profiles')
+        .select('id, username, name, role')
+        .eq('role', 'corretor');
+
+      if (error) throw error;
+      if (!brokersData) return;
+
+      setBrokers(brokersData);
+      if (brokersData.length > 0) {
+        setBroker(brokersData[0].username);
+        setSelectedBroker(brokersData[0]);
+      }
+    } catch (error) {
+      console.error('Error loading brokers:', error);
+      setError('Erro ao carregar corretores');
+    }
+  };
+
+  useEffect(() => {
+    loadBrokers();
+  }, []);
 
   const fetchCepData = async (cep: string) => {
     setLoadingCep(true);
@@ -90,91 +128,6 @@ const CreateClient = () => {
     }
   };
 
-  const checkAdminAccess = async () => {
-    try {
-      const { user } = useAuth();
-      if (!user) return false;
-
-      // Verificar se o usuário tem acesso ao painel admin
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      if (userError) {
-        console.error('Erro ao verificar acesso:', userError);
-        return false;
-      }
-
-      return userData?.role === 'admin';
-    } catch (error) {
-      console.error('Erro ao verificar acesso:', error);
-      return false;
-    }
-  };
-
-  const loadBrokers = async () => {
-    try {
-      // Buscar corretores com role 'corretor'
-      const { data: brokersData, error: brokersError } = await supabase
-        .from('users')
-        .select('id, broker_id, name, role')
-        .eq('role', 'corretor')
-        .order('name');
-
-      // Verificar se temos dados
-      if (brokersError) {
-        console.error('Erro ao buscar corretores:', brokersError);
-        setBrokerError('Erro ao buscar corretores');
-        throw brokersError;
-      }
-
-      if (!brokersData || brokersData.length === 0) {
-        console.log('Nenhum corretor encontrado com role corretor');
-        setBrokers([]);
-        setBrokerError('Nenhum corretor encontrado');
-        return;
-      }
-
-      if (brokersError) {
-        console.error('Erro ao buscar corretores:', brokersError);
-        setBrokerError('Erro ao buscar corretores');
-        throw brokersError;
-      }
-
-      // Verificar se temos dados
-      if (!brokersData || brokersData.length === 0) {
-        console.log('Nenhum corretor encontrado com broker_id');
-        setBrokers([]);
-        setBrokerError('Nenhum corretor encontrado');
-        return;
-      }
-
-      // Verificar a estrutura dos dados
-      console.log('Dados brutos dos corretores:', brokersData);
-      
-      // Converter os dados
-      const formattedBrokers = brokersData.map(broker => ({
-        id: broker.id, // ID sequencial
-        broker_id: broker.broker_id, // UUID
-        name: broker.name,
-        role: broker.role
-      }));
-
-      console.log('Corretores formatados:', formattedBrokers);
-      setBrokers(formattedBrokers);
-    } catch (error) {
-      console.error('Erro ao carregar corretores:', error);
-      setBrokerError('Erro ao carregar corretores');
-      throw error;
-    }
-  };
-
-  useEffect(() => {
-    loadBrokers();
-  }, []);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -190,9 +143,6 @@ const CreateClient = () => {
       }
       if (!email.trim()) {
         throw new Error('O email é obrigatório');
-      }
-      if (!broker) {
-        throw new Error('O corretor é obrigatório');
       }
 
       // Validar CPF
@@ -220,10 +170,6 @@ const CreateClient = () => {
         throw new Error('Erro ao verificar CPF');
       }
 
-      // Log para debug
-      console.log('Corretor selecionado:', selectedBroker);
-      console.log('broker_id:', broker);
-
       // Preparar dados para inserção
       const clientData = {
         name: name.trim(),
@@ -235,39 +181,31 @@ const CreateClient = () => {
         number: number.trim(),
         neighborhood: neighborhood.trim(),
         city: city.trim(),
-        state: state.trim().toUpperCase() || 'SP', // Se não tiver estado, usa SP como padrão
+        state: state.trim().toUpperCase() || 'SP',
         complement: complement.trim(),
         status,
-        broker_id: broker, // Usando o UUID do corretor
+        broker_id: user.username, // Usando o username como broker_id
         notes: notes.trim()
       };
 
-      // Log para debug
-      console.log('Dados do cliente para inserção:', clientData);
-
       // Inserir cliente
-      const { error: insertError, data: insertData } = await supabase
+      const { error: insertError } = await supabase
         .from('clients')
-        .insert([clientData])
-        .select('*');
+        .insert([clientData]);
 
       if (insertError) {
-        console.error('Erro de inserção:', insertError);
         throw new Error(`Erro ao salvar cliente: ${insertError.message}`);
       }
-
-      console.log('Cliente inserido com sucesso:', insertData);
 
       // Redirecionar para a lista de clientes
       navigate('/admin/clients', {
         state: { success: 'Cliente criado com sucesso!' }
       });
     } catch (error) {
-      console.error('Erro ao criar cliente:', error);
       if (error instanceof Error) {
-        alert(error.message);
+        setError(error.message);
       } else {
-        alert('Erro ao criar cliente. Por favor, tente novamente.');
+        setError('Erro ao criar cliente. Por favor, tente novamente.');
       }
     } finally {
       setLoading(false);
@@ -276,214 +214,183 @@ const CreateClient = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto">
-        <h1 className="text-2xl font-semibold mb-4">Criar Novo Cliente</h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
+        <h1 className="text-2xl font-bold mb-6">Criar Novo Cliente</h1>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {user?.role !== 'corretor' ? (
             <div>
-              <Label htmlFor="name">Nome</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="mt-1"
-                placeholder="Nome completo"
-              />
-            </div>
-            <div>
-              <Label htmlFor="cpf">CPF</Label>
-              <Input
-                id="cpf"
-                value={cpf}
-                onChange={(e) => setCpf(e.target.value)}
-                className="mt-1"
-                placeholder="000.000.000-00"
-              />
-            </div>
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1"
-                placeholder="exemplo@email.com"
-              />
-            </div>
-            <div>
-              <Label htmlFor="phone">Telefone</Label>
-              <Input
-                id="phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="mt-1"
-                placeholder="(00) 00000-0000"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="cep">CEP</Label>
-              <div className="relative">
-                <Input
-                  id="cep"
-                  value={cep}
-                  onChange={(e) => {
-                    const newCep = e.target.value;
-                    setCep(newCep);
-                    if (newCep.length === 8) {
-                      fetchCepData(newCep);
-                    }
-                  }}
-                  className="mt-1"
-                  placeholder="00000-000"
-                />
-                {loadingCep && (
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                    <svg className="h-5 w-5 animate-spin text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="street">Rua</Label>
-              <Input
-                id="street"
-                value={street}
-                onChange={(e) => setStreet(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="number">Número</Label>
-              <Input
-                id="number"
-                value={number}
-                onChange={(e) => setNumber(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="neighborhood">Bairro</Label>
-              <Input
-                id="neighborhood"
-                value={neighborhood}
-                onChange={(e) => setNeighborhood(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="city">Cidade</Label>
-              <Input
-                id="city"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="state">Estado</Label>
-              <Input
-                id="state"
-                value={state}
-                onChange={(e) => setState(e.target.value)}
-                className="mt-1"
-                maxLength={2}
-              />
-            </div>
-            <div>
-              <Label htmlFor="complement">Complemento</Label>
-              <Input
-                id="complement"
-                value={complement}
-                onChange={(e) => setComplement(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="status">Status</Label>
+              <Label htmlFor="broker_id">Corretor</Label>
               <Select
-                value={status}
-                onValueChange={setStatus}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Selecione o status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Novo">Novo</SelectItem>
-                  <SelectItem value="Em Andamento">Em Andamento</SelectItem>
-                  <SelectItem value="Concluído">Concluído</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="broker">Corretor</Label>
-              <Select
-                value={broker || ''}
+                value={broker}
                 onValueChange={(value) => {
-                  if (value === 'none') return;
-                  const selected = brokers.find(b => b.broker_id === value);
-                  setSelectedBroker(selected);
                   setBroker(value);
                 }}
+                required
               >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Selecione o corretor" />
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um corretor" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none" disabled>
-                    Selecione um corretor...
-                  </SelectItem>
-                  {brokers && Array.isArray(brokers) && brokers.length > 0 ? (
-                    brokers.map((broker) => (
-                      <SelectItem key={broker.id} value={broker.broker_id}>
-                        {broker.name} ({broker.role})
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="none" disabled>
-                      {brokerError || 'Nenhum corretor encontrado'}
+                  {brokers.map((broker) => (
+                    <SelectItem key={broker.id} value={broker.username}>
+                      {broker.name}
                     </SelectItem>
-                  )}
+                  ))}
                 </SelectContent>
               </Select>
             </div>
+          ) : (
+            <div>
+              <Label htmlFor="broker_id">Corretor: {user?.name}</Label>
+              <div className="text-gray-500">
+                Corretor atual: {user?.username}
+              </div>
+            </div>
+          )}
+          <div className="space-y-4">
+            <Label htmlFor="name">Nome</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
           </div>
-
-          <div>
+          <div className="space-y-4">
+            <Label htmlFor="cpf">CPF</Label>
+            <Input
+              id="cpf"
+              value={cpf}
+              onChange={(e) => {
+                const cpf = e.target.value.replace(/\D/g, '');
+                setCpf(cpf);
+              }}
+              required
+            />
+          </div>
+          <div className="space-y-4">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-4">
+            <Label htmlFor="phone">Telefone</Label>
+            <Input
+              id="phone"
+              value={phone}
+              onChange={(e) => {
+                const phone = e.target.value.replace(/\D/g, '');
+                setPhone(phone);
+              }}
+              required
+            />
+          </div>
+          <div className="space-y-4">
+            <Label htmlFor="cep">CEP</Label>
+            <div className="relative">
+              <Input
+                id="cep"
+                value={cep}
+                onChange={(e) => {
+                  const cep = e.target.value.replace(/\D/g, '');
+                  setCep(cep);
+                }}
+                required
+              />
+              <Button
+                type="button"
+                onClick={() => fetchCepData(cep)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-500 hover:bg-blue-600 text-white"
+                disabled={loadingCep}
+              >
+                {loadingCep ? 'Carregando...' : 'Buscar'}
+              </Button>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <Label htmlFor="street">Rua</Label>
+            <Input
+              id="street"
+              value={street}
+              onChange={(e) => setStreet(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-4">
+            <Label htmlFor="number">Número</Label>
+            <Input
+              id="number"
+              value={number}
+              onChange={(e) => setNumber(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-4">
+            <Label htmlFor="neighborhood">Bairro</Label>
+            <Input
+              id="neighborhood"
+              value={neighborhood}
+              onChange={(e) => setNeighborhood(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-4">
+            <Label htmlFor="city">Cidade</Label>
+            <Input
+              id="city"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-4">
+            <Label htmlFor="state">Estado</Label>
+            <Input
+              id="state"
+              value={state}
+              onChange={(e) => setState(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-4">
+            <Label htmlFor="complement">Complemento</Label>
+            <Input
+              id="complement"
+              value={complement}
+              onChange={(e) => setComplement(e.target.value)}
+            />
+          </div>
+          <div className="space-y-4">
+            <Label htmlFor="status">Status</Label>
+            <Select
+              value={status}
+              onValueChange={setStatus}
+              required
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Novo">Novo</SelectItem>
+                <SelectItem value="Em Andamento">Em Andamento</SelectItem>
+                <SelectItem value="Concluído">Concluído</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-4">
             <Label htmlFor="notes">Observações</Label>
             <Textarea
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="mt-1"
-              placeholder="Digite suas observações aqui..."
             />
           </div>
-
           <Button type="submit" className="w-full mt-4" disabled={loading}>
-            {loading ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Criando...
-              </>
-            ) : (
-              'Criar Cliente'
-            )}
+            {loading ? 'Criando...' : 'Criar Cliente'}
           </Button>
         </form>
       </div>

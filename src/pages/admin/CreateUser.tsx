@@ -14,7 +14,11 @@ const CreateUser = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [birth, setBirth] = useState(null);
+  const [cpf, setCpf] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
   const [emergencyContact, setEmergencyContact] = useState(null);
   const [emergencyPhone, setEmergencyPhone] = useState(null);
   const [role, setRole] = useState('corretor');
@@ -37,6 +41,18 @@ const CreateUser = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validar senha
+    if (!password || password.length < 6) {
+      setError('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('As senhas não coincidem');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -49,7 +65,10 @@ const CreateUser = () => {
             name,
             username,
             email,
-            password: password, // Armazenamos a senha aqui
+            cpf,
+            phone,
+            address,
+            password: password, // A senha será armazenada como texto (será criptografada no banco)
             birth,
             emergency_contact: emergencyContact,
             emergency_phone: emergencyPhone,
@@ -92,7 +111,17 @@ const CreateUser = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Criar Novo Usuário</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-semibold">Criar Novo Usuário</h1>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => navigate('/admin/users')}
+          className="bg-orange-500 hover:bg-orange-600 text-gray-900"
+        >
+          Voltar para Usuários
+        </Button>
+      </div>
 
       {error && (
         <div className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
@@ -132,13 +161,67 @@ const CreateUser = () => {
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="password">Senha</Label>
+              <Label htmlFor="cpf">CPF <span className="text-red-500">*</span></Label>
+              <Input
+                id="cpf"
+                type="text"
+                value={cpf}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  if (value.length <= 11) {
+                    setCpf(value);
+                  }
+                }}
+                placeholder="Apenas números"
+                required
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="phone">Telefone</Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  if (value.length <= 11) {
+                    setPhone(value);
+                  }
+                }}
+                placeholder="(XX) XXXXX-XXXX"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="address">Endereço Completo</Label>
+              <Input
+                id="address"
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Ex: Rua das Flores, 123 - Centro, São Paulo - SP, 01000-000"
+                className="h-16"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="password">Senha <span className="text-red-500">*</span></Label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Senha"
+                placeholder="Digite uma senha forte"
+                required
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="confirmPassword">Confirmar Senha <span className="text-red-500">*</span></Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirme a senha"
+                required
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -196,11 +279,12 @@ const CreateUser = () => {
               </div>
             </div>
           </div>
-          <div className="flex justify-end space-x-2">
-            <Button type="button" onClick={() => navigate('/admin/users')}>
-              Cancelar
-            </Button>
-            <Button type="submit" className="bg-green-600 hover:bg-green-700">
+          <div className="flex justify-end">
+            <Button 
+              type="submit" 
+              disabled={loading}
+              className="bg-green-500 hover:bg-green-600 text-white"
+            >
               {loading ? 'Criando...' : 'Criar Usuário'}
             </Button>
           </div>

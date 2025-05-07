@@ -5,18 +5,14 @@ import Properties from '@/pages/admin/Properties';
 import PropertyForm from '@/components/admin/PropertyForm';
 import Users from '@/pages/admin/Users';
 import CreateUser from '@/pages/admin/CreateUser';
-import EditUser from '@/pages/admin/EditUser';
+import UserEdit from '@/pages/admin/UserEdit';
+import Dashboard from '@/pages/admin/Dashboard';
 import Clients from '@/pages/admin/Clients';
 import ClientEdit from '@/pages/admin/ClientEdit';
 import NewClient from '@/pages/admin/NewClient';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
-  // Implement authentication check here
-  const isAuthenticated = true; // Replace with actual auth check
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
-  }
+  // Remove todas as verificações de acesso
   return <>{children}</>;
 };
 
@@ -25,9 +21,15 @@ export const adminRoutes = [
     path: '/admin',
     element: (
       <PrivateRoute>
-        <AdminLayout>
-          <Navigate to="/admin/properties" replace />
-        </AdminLayout>
+        <AdminLayout />
+      </PrivateRoute>
+    ),
+  },
+  {
+    path: '/admin/dashboard',
+    element: (
+      <PrivateRoute>
+        <Dashboard />
       </PrivateRoute>
     ),
   },
@@ -35,9 +37,7 @@ export const adminRoutes = [
     path: '/admin/properties',
     element: (
       <PrivateRoute>
-        <AdminLayout>
-          <Properties />
-        </AdminLayout>
+        <AdminLayout />
       </PrivateRoute>
     ),
   },
@@ -45,9 +45,7 @@ export const adminRoutes = [
     path: '/admin/properties/new',
     element: (
       <PrivateRoute>
-        <AdminLayout>
-          <PropertyForm />
-        </AdminLayout>
+        <AdminLayout />
       </PrivateRoute>
     ),
   },
@@ -55,9 +53,7 @@ export const adminRoutes = [
     path: '/admin/users',
     element: (
       <PrivateRoute>
-        <AdminLayout>
-          <Users />
-        </AdminLayout>
+        <AdminLayout />
       </PrivateRoute>
     ),
   },
@@ -65,9 +61,7 @@ export const adminRoutes = [
     path: '/admin/users/create',
     element: (
       <PrivateRoute>
-        <AdminLayout>
-          <CreateUser />
-        </AdminLayout>
+        <AdminLayout />
       </PrivateRoute>
     ),
   },
@@ -75,9 +69,7 @@ export const adminRoutes = [
     path: '/admin/users/:id/edit',
     element: (
       <PrivateRoute>
-        <AdminLayout>
-          <EditUser />
-        </AdminLayout>
+        <AdminLayout />
       </PrivateRoute>
     ),
   },
@@ -85,9 +77,7 @@ export const adminRoutes = [
     path: '/admin/properties/:id/edit',
     element: (
       <PrivateRoute>
-        <AdminLayout>
-          <PropertyForm />
-        </AdminLayout>
+        <AdminLayout />
       </PrivateRoute>
     ),
   },
