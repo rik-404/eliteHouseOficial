@@ -1,21 +1,23 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Bed, Bath, ArrowRight, MapPin } from 'lucide-react';
+import { Bed, Bath, ArrowRight, MapPin, Square, Car } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 export type PropertyType = {
   id: number;
+  reference: string;
   title: string;
   price: number;
-  address: string;
+  location: string;
   city: string;
-  state: string;
+  uf: string;
   bedrooms: number;
   bathrooms: number;
   area: number;
-  image: string;
+  garage?: number;
+  image_url: string;
   type: 'Apartamento' | 'Casa' | 'Cobertura' | 'Terreno';
   featured?: boolean;
 };
@@ -38,7 +40,7 @@ const PropertyCard = ({ property, featured = false }: PropertyCardProps) => {
       <div className="relative overflow-hidden h-[200px]">
         {/* Property Image */}
         <img 
-          src={property.image} 
+          src={property.image_url} 
           alt={property.title} 
           className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
         />
@@ -63,13 +65,13 @@ const PropertyCard = ({ property, featured = false }: PropertyCardProps) => {
       {/* Content */}
       <div className="p-4">
         <div className="flex justify-between items-start">
-          <h3 className="text-lg font-semibold text-white mb-2 line-clamp-1">{property.title}</h3>
+          <h3 className="text-lg font-semibold text-black mb-2 line-clamp-1">{property.title}</h3>
           <span className="text-eliteOrange font-bold">{formattedPrice}</span>
         </div>
         
         <div className="flex items-center text-muted-foreground mb-4">
           <MapPin size={14} className="mr-1" />
-          <span className="text-sm truncate">{property.address}, {property.city}/{property.state}</span>
+          <span className="text-sm truncate">{property.location}, {property.city}/{property.uf}</span>
         </div>
         
         <div className="flex justify-between mb-4 text-sm">
@@ -81,8 +83,13 @@ const PropertyCard = ({ property, featured = false }: PropertyCardProps) => {
             <Bath size={16} className="text-eliteOrange mr-1" />
             <span>{property.bathrooms} {property.bathrooms === 1 ? 'Banheiro' : 'Banheiros'}</span>
           </div>
-          <div>
-            <span className="text-muted-foreground">{property.area} m²</span>
+          <div className="flex items-center">
+            <Square size={16} className="text-eliteOrange mr-1" />
+            <span>{property.area} m²</span>
+          </div>
+          <div className="flex items-center">
+            <Car size={16} className="text-eliteOrange mr-1" />
+            <span>{property.garage || 0} {property.garage === 1 ? 'Vaga' : 'Vagas'}</span>
           </div>
         </div>
         

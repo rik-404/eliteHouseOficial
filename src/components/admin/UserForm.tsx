@@ -146,6 +146,9 @@ const UserForm = ({ user }: UserFormProps) => {
             <SelectContent>
               <SelectItem value="admin">Administrador</SelectItem>
               <SelectItem value="user">Usuário</SelectItem>
+              <SelectItem value="broker">Corretor</SelectItem>
+              <SelectItem value="supervisor">Supervisor</SelectItem>
+              <SelectItem value="manager">Gerente</SelectItem>
             </SelectContent>
           </Select>
         </div>

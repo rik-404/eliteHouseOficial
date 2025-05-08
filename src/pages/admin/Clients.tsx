@@ -58,22 +58,43 @@ const Clients = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // Função para verificar se o usuário pode ver pendentes
+  const canViewPendentes = (user: any) => {
+    return user?.role === 'admin' || user?.role === 'dev';
+  };
+
   // Função para alternar entre ver todos e ver pendentes
 
 
-  const statusOptions = [
-    { value: 'all', label: 'Todos os status' },
-    { value: 'pendente', label: 'Pendente' },
-    { value: 'em_andamento', label: 'Em Andamento' },
-    { value: 'concluido', label: 'Concluído' },
-    { value: 'cancelado', label: 'Cancelado' },
-  ];
+
 
   useEffect(() => {
     if (user?.role === 'corretor') {
       setSelectedBroker(user.broker_id);
     }
     fetchClients();
+
+    // Configurar escuta em tempo real
+    const channel = supabase
+      .channel('clients-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'clients',
+        },
+        (payload) => {
+          console.log('Change received!', payload);
+          fetchClients();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      // Limpar a escuta quando o componente for desmontado
+      channel.unsubscribe();
+    };
   }, [user?.broker_id]);
 
   const handleDelete = (client: Client) => {
@@ -203,7 +224,9 @@ const Clients = () => {
         query = query.eq('broker_id', selectedBroker);
       }
 
-      if (selectedStatus) {
+      if (selectedStatus === 'all') {
+        query = query.neq('status', 'pending');
+      } else if (selectedStatus) {
         query = query.eq('status', selectedStatus);
       }
 
@@ -242,10 +265,17 @@ const Clients = () => {
 
   const filteredClients = useMemo(() => {
     return clients.filter(client => {
-      return (!selectedBroker || client.broker_id === selectedBroker) &&
-             (!selectedStatus || selectedStatus === 'all' || client.status === selectedStatus);
+      const brokerFilter = !selectedBroker || client.broker_id === selectedBroker;
+      const statusFilter = !selectedStatus || selectedStatus === 'all' || client.status === selectedStatus;
+      
+      // Se o usuário for corretor, mostra apenas seus clientes
+      if (user?.role === 'corretor') {
+        return client.broker_id === user.broker_id && statusFilter;
+      }
+      
+      return brokerFilter && statusFilter;
     });
-  }, [clients, selectedBroker, selectedStatus]);
+  }, [clients, selectedBroker, selectedStatus, user?.role, user?.broker_id]);
 
   const getBrokerName = (brokerId: string) => {
     const broker = brokers.find(b => b.broker_id === brokerId);
@@ -254,6 +284,29 @@ const Clients = () => {
 
   return (
     <div className="container mx-auto p-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <h1 className="text-2xl font-bold">Clientes</h1>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="statusFilter" className="text-sm">Status</Label>
+            <Select
+              value={selectedStatus}
+              onValueChange={(value) => setSelectedStatus(value === 'all' ? null : value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Todos os status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {Object.entries(statusColors).map(([status, color]) => (
+                  <SelectItem key={status} value={status}>
+                    <span style={{ color }} className="mr-2">•</span>
+                    {status}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -292,9 +345,10 @@ const Clients = () => {
         <div className="flex items-center gap-4">
 
           <Button
-            variant="outline"
+            variant="default"
+            className="bg-orange-500 hover:bg-orange-600 text-white flex items-center gap-2"
             onClick={() => setIsKanbanView(!isKanbanView)}
-            className="flex items-center gap-2"
+            disabled={selectedStatus === 'pending'}
           >
             {isKanbanView ? 'Ver Lista' : 'Ver Kanban'}
             <span className="text-sm">(L)</span>
@@ -302,7 +356,7 @@ const Clients = () => {
           <Select
             value={selectedBroker}
             onValueChange={setSelectedBroker}
-            disabled={!brokers.length || user?.role === 'corretor'}
+            disabled={selectedStatus === 'pending' || !brokers.length || user?.role === 'corretor'}
           >
             <SelectTrigger className="bg-white border border-gray-300 rounded-lg py-2 pl-4 pr-8 text-left shadow-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
               {user?.role === 'corretor' ? getBrokerName(user.broker_id) : (selectedBroker ? getBrokerName(selectedBroker) : 'Selecione um corretor')}
@@ -314,6 +368,30 @@ const Clients = () => {
               ))}
             </SelectContent>
           </Select>
+          {canViewPendentes(user) && (
+            <div className="flex gap-2">
+              <Button
+                variant="default"
+                className="bg-blue-500 hover:bg-blue-600 text-white"
+                onClick={() => setSelectedStatus('all')}
+              >
+                Todos
+              </Button>
+              <Button
+                variant="outline"
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 relative"
+                onClick={() => setSelectedStatus('pending')}
+                disabled={isKanbanView}
+              >
+                <span className="flex items-center gap-2">
+                  <span>Pendentes</span>
+                  <span className="ml-2 px-2 py-1 text-xs font-medium rounded-full bg-red-500 text-white">
+                    {pendingCount}
+                  </span>
+                </span>
+              </Button>
+            </div>
+          )}
           <Button
             variant="default"
             className="bg-green-500 hover:bg-green-600 text-white"

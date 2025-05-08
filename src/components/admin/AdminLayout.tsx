@@ -47,6 +47,15 @@ const AdminLayout = () => {
                 Dashboard
               </Link>
             </li>
+            <li>
+              <Link to="/admin/properties" className="flex items-center px-4 py-2 text-white hover:bg-[#242434] rounded transition-colors duration-200">
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 mr-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                  <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+                Imóveis
+              </Link>
+            </li>
             {user?.role !== 'corretor' && (
               <li>
                 <Link to="/admin/users" className="flex items-center px-4 py-2 text-white hover:bg-[#242434] rounded transition-colors duration-200">
@@ -56,7 +65,7 @@ const AdminLayout = () => {
               </li>
             )}
             <li>
-              <Link to="/admin/clients" className="flex items-center px-4 py-2 text-white hover:bg-[#242434] rounded transition-colors duration-200">
+              <Link to="/admin/clients" className="flex items-center px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded transition-colors duration-200">
                 <User className="w-4 h-4 mr-3" />
                 Clientes
                 {user?.role !== 'corretor' && (

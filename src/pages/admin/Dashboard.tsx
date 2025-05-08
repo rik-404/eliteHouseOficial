@@ -28,9 +28,8 @@ const Dashboard = () => {
 
       // Total de clientes
       const { count: totalClients } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .eq('role', 'client');
+        .from('clients')
+        .select('*', { count: 'exact', head: true });
 
       setStats({
         totalProperties: totalProperties || 0,

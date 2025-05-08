@@ -14,6 +14,10 @@ export const PrivateUserRoute = () => {
     </div>;
   }
 
+  if (!window.location.pathname.includes('/admin')) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+  
   if (user?.role === 'corretor' && window.location.pathname.includes('/admin/users')) {
     return <Navigate to="/admin/dashboard" replace />;
   }

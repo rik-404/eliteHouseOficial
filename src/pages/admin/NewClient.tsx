@@ -208,178 +208,164 @@ const NewClient = () => {
   };
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="max-w-4xl mx-auto p-4 bg-white rounded-lg shadow-md">
       <div className="flex justify-between items-center mb-4">
         <Button
           variant="default"
           onClick={() => navigate('/admin/clients')}
-          className="bg-orange-500 hover:bg-orange-600 text-black hover:text-black"
+          className="bg-orange-500 hover:bg-orange-600 text-white"
         >
           Voltar
         </Button>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Criar Novo Cliente</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name">Nome <span className="text-red-500">*</span></Label>
-                <Input
-                  id="name"
-                  value={client.name}
-                  onChange={(e) => setClient({ ...client, name: e.target.value })}
-                  required
-                />
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">Criar Novo Cliente</h1>
+      </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="name">Nome <span className="text-red-500">*</span></Label>
+            <Input
+              id="name"
+              value={client.name}
+              onChange={(e) => setClient({ ...client, name: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="cpf">CPF <span className="text-red-500">*</span></Label>
+            <Input
+              id="cpf"
+              value={client.cpf}
+              onChange={(e) => setClient({ ...client, cpf: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
+            <Input
+              id="email"
+              type="email"
+              value={client.email}
+              onChange={(e) => setClient({ ...client, email: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="phone">Telefone <span className="text-red-500">*</span></Label>
+            <Input
+              id="phone"
+              value={client.phone}
+              onChange={(e) => setClient({ ...client, phone: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="broker_id">Corretor <span className="text-red-500">*</span></Label>
+            {user?.role === 'corretor' ? (
+              <div className="text-gray-500">
+                Corretor: {user?.name || user?.username}
               </div>
-              <div>
-                <Label htmlFor="cpf">CPF <span className="text-red-500">*</span></Label>
-                <Input
-                  id="cpf"
-                  value={client.cpf}
-                  onChange={(e) => setClient({ ...client, cpf: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={client.email}
-                  onChange={(e) => setClient({ ...client, email: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="phone">Telefone <span className="text-red-500">*</span></Label>
-                <Input
-                  id="phone"
-                  value={client.phone}
-                  onChange={(e) => setClient({ ...client, phone: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="broker_id">Corretor <span className="text-red-500">*</span></Label>
-                {user?.role === 'corretor' ? (
-                  <div className="text-gray-500">
-                    Corretor: {user?.name || user?.username}
-                  </div>
-                ) : (
-                  <Select
-                    value={client.broker_id}
-                    onValueChange={(value) => setClient({ ...client, broker_id: value })}
-                    required
-                    disabled={loading || noBrokers}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={loading ? 'Carregando corretores...' : noBrokers ? 'Nenhum corretor encontrado' : 'Selecionar corretor'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {brokers.map((broker) => (
-                        <SelectItem key={broker.id} value={broker.broker_id}>
-                          {broker.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                {noBrokers && (
-                  <p className="mt-2 text-sm text-red-500">
-                    Por favor, cadastre um corretor primeiro
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="cep">CEP</Label>
-                <Input
-                  id="cep"
-                  value={client.cep}
-                  onChange={handleCEPChange}
-                  placeholder="Digite o CEP (apenas números)"
-                />
-              </div>
-              <div>
-                <Label htmlFor="street">Rua</Label>
-                <Input
-                  id="street"
-                  value={client.street}
-                  onChange={(e) => setClient({ ...client, street: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="number">Número</Label>
-                <Input
-                  id="number"
-                  value={client.number}
-                  onChange={(e) => setClient({ ...client, number: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="neighborhood">Bairro</Label>
-                <Input
-                  id="neighborhood"
-                  value={client.neighborhood}
-                  onChange={(e) => setClient({ ...client, neighborhood: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="city">Cidade</Label>
-                <Input
-                  id="city"
-                  value={client.city}
-                  onChange={(e) => setClient({ ...client, city: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="state">Estado</Label>
-                <Input
-                  id="state"
-                  value={client.state}
-                  onChange={(e) => setClient({ ...client, state: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="complement">Complemento</Label>
-                <Input
-                  id="complement"
-                  value={client.complement}
-                  onChange={(e) => setClient({ ...client, complement: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="notes">Observações</Label>
-                <Input
-                  id="notes"
-                  value={client.notes}
-                  onChange={(e) => setClient({ ...client, notes: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <Button
-                type="submit"
-                disabled={loading}
-                className="bg-green-500 hover:bg-green-600 text-white"
+            ) : (
+              <Select
+                value={client.broker_id}
+                onValueChange={(value) => setClient({ ...client, broker_id: value })}
+                required
+                disabled={loading || noBrokers}
               >
-                {loading ? 'Criando...' : 'Criar'}
-              </Button>
-            </div>
-            {error && (
-              <Alert variant="destructive" className="mt-4">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
+                <SelectTrigger>
+                  <SelectValue placeholder={loading ? 'Carregando corretores...' : noBrokers ? 'Nenhum corretor encontrado' : 'Selecionar corretor'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {brokers.map((broker) => (
+                    <SelectItem key={broker.id} value={broker.broker_id}>
+                      {broker.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
-          </form>
-        </CardContent>
-      </Card>
+            {noBrokers && (
+              <p className="mt-2 text-sm text-red-500">
+                Por favor, cadastre um corretor primeiro
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="cep">CEP</Label>
+            <Input
+              id="cep"
+              value={client.cep}
+              onChange={handleCEPChange}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="street">Rua</Label>
+            <Input
+              id="street"
+              value={client.street}
+              onChange={(e) => setClient({ ...client, street: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="number">Número</Label>
+            <Input
+              id="number"
+              value={client.number}
+              onChange={(e) => setClient({ ...client, number: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="neighborhood">Bairro</Label>
+            <Input
+              id="neighborhood"
+              value={client.neighborhood}
+              onChange={(e) => setClient({ ...client, neighborhood: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="city">Cidade</Label>
+            <Input
+              id="city"
+              value={client.city}
+              onChange={(e) => setClient({ ...client, city: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="state">Estado</Label>
+            <Input
+              id="state"
+              value={client.state}
+              onChange={(e) => setClient({ ...client, state: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="complement">Complemento</Label>
+            <Input
+              id="complement"
+              value={client.complement}
+              onChange={(e) => setClient({ ...client, complement: e.target.value })}
+            />
+          </div>
+        </div>
+        <div className="mt-4">
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+          >
+            {loading ? 'Criando...' : 'Criar Cliente'}
+          </Button>
+        </div>
+      </form>
     </div>
   );
 };

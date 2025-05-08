@@ -49,27 +49,49 @@ const EditClient = () => {
   const [error, setError] = useState<string | null>(null);
   const [noBrokers, setNoBrokers] = useState(false);
 
+  const fetchClient = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      setClient(data);
+    } catch (err) {
+      console.error('Erro ao carregar cliente:', err);
+      setError('Erro ao carregar cliente. Por favor, tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchClient = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from('clients')
-          .select('*')
-          .eq('id', id)
-          .single();
-
-        if (error) throw error;
-        setClient(data);
-      } catch (err) {
-        console.error('Erro ao carregar cliente:', err);
-        setError('Erro ao carregar cliente. Por favor, tente novamente.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchClient();
+
+    // Configurar escuta em tempo real
+    const channel = supabase
+      .channel('client-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'clients',
+          filter: `id=eq.${id}`
+        },
+        (payload) => {
+          console.log('Change received for client:', payload);
+          fetchClient();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
   }, [id]);
 
   useEffect(() => {
