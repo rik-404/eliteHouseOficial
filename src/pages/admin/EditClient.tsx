@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ViaCEPResponse {
@@ -38,37 +38,73 @@ interface Client {
   notes: string;
 }
 
-const NewClient = () => {
+const EditClient = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { id } = useParams();
 
-  // Inicializar o estado do cliente com o broker_id do usuário corretor
-  const initialClient: Client = {
-    id: '',
-    name: '',
-    email: '',
-    phone: '',
-    cpf: '',
-    cep: '',
-    street: '',
-    number: '',
-    neighborhood: '',
-    city: '',
-    state: '',
-    complement: '',
-    broker_id: user?.role === 'corretor' ? user.broker_id : '',
-    status: 'Novo' as ClientStatus,
-    notes: ''
-  };
-
-  const [client, setClient] = useState<Client>(initialClient);
+  const [client, setClient] = useState<Client | null>(null);
   const [brokers, setBrokers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [noBrokers, setNoBrokers] = useState(false);
 
+  useEffect(() => {
+    const fetchClient = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('clients')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (error) throw error;
+        setClient(data);
+      } catch (err) {
+        console.error('Erro ao carregar cliente:', err);
+        setError('Erro ao carregar cliente. Por favor, tente novamente.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchClient();
+  }, [id]);
+
+  useEffect(() => {
+    const fetchBrokers = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, name, broker_id')
+          .eq('role', 'corretor')
+          .order('name');
+
+        if (error) throw error;
+        
+        const validBrokers = data?.filter((user: any) => user.broker_id) || [];
+        setBrokers(validBrokers);
+        
+        if (validBrokers.length === 0) {
+          setNoBrokers(true);
+        }
+      } catch (err) {
+        console.error('Erro ao carregar corretores:', err);
+        setError('Erro ao carregar lista de corretores');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBrokers();
+  }, []);
+
   const handleCEPChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const cep = e.target.value.replace(/\D/g, ''); // Remove caracteres não numéricos
+    if (!client) return;
+
+    const cep = e.target.value.replace(/\D/g, '');
     setClient(prev => ({ ...prev, cep }));
 
     if (cep.length === 8) {
@@ -98,129 +134,85 @@ const NewClient = () => {
     }
   };
 
-  useEffect(() => {
-    const fetchBrokers = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from('users')
-          .select('id, name, broker_id')
-          .eq('role', 'corretor')
-          .order('name');
-
-        if (error) throw error;
-        
-        // Filtra apenas os usuários que têm broker_id
-        const validBrokers = data?.filter((user: any) => user.broker_id) || [];
-        setBrokers(validBrokers);
-        
-        if (validBrokers.length === 0) {
-          setNoBrokers(true);
-        }
-      } catch (err) {
-        console.error('Erro ao carregar corretores:', err);
-        setError('Erro ao carregar lista de corretores');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBrokers();
-  }, []);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!client) return;
+
     setLoading(true);
     setError(null);
 
     try {
-      console.log('Dados do cliente antes da validação:', client);
-      
-      // Removemos os campos criado_at e updated_at para que o Supabase gere automaticamente
-      const clientData = {
-        name: client.name,
-        cpf: client.cpf,
-        email: client.email,
-        phone: client.phone,
-        cep: client.cep,
-        street: client.street,
-        number: client.number,
-        neighborhood: client.neighborhood,
-        city: client.city,
-        state: client.state,
-        complement: client.complement,
-        broker_id: client.broker_id,
-        status: client.status,
-        notes: client.notes
-      };
-
-      // Verifica se o broker_id é um UUID válido
-      if (!clientData.broker_id) {
-        throw new Error('Por favor, selecione um corretor');
-      }
-
-      if (!clientData.broker_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-        throw new Error('Por favor, selecione um corretor válido');
-      }
-
-      // Adiciona o broker_id só se for válido
-      clientData.broker_id = client.broker_id;
-
       const { data, error } = await supabase
         .from('clients')
-        .insert([{
-          ...clientData,
-          broker_id: client.broker_id
-        }])
+        .update({
+          name: client.name,
+          cpf: client.cpf,
+          email: client.email,
+          phone: client.phone,
+          cep: client.cep,
+          street: client.street,
+          number: client.number,
+          neighborhood: client.neighborhood,
+          city: client.city,
+          state: client.state,
+          complement: client.complement,
+          broker_id: client.broker_id,
+          status: client.status,
+          notes: client.notes
+        })
+        .eq('id', client.id)
         .select()
         .single();
 
-      if (error) {
-        if (error.code === '23505') { // Código de erro do PostgreSQL para violação de unicidade
-          // Verifica se o erro é sobre email ou CPF
-          if (error.message.includes('clients_email_key')) {
-            setError('Email já cadastrado. Por favor, use um email diferente.');
-          } else if (error.message.includes('clients_cpf_key')) {
-            setError('CPF já cadastrado. Por favor, use um CPF diferente.');
-          } else {
-            setError('Erro ao criar cliente. Por favor, tente novamente.');
-          }
-        } else {
-          setError('Erro ao criar cliente. Por favor, tente novamente.');
-        }
-        return;
-      }
+      if (error) throw error;
 
-      // Redireciona para a página de clientes após criar
       navigate('/admin/clients');
     } catch (err) {
-      console.error('Erro ao criar cliente:', err);
-      if (err instanceof Error) {
-        setError(`Erro: ${err.message}`);
-      } else if (typeof err === 'object' && err !== null && 'message' in err) {
-        setError(`Erro: ${err.message}`);
-      } else {
-        setError('Erro ao criar cliente. Por favor, tente novamente.');
-      }
+      console.error('Erro ao atualizar cliente:', err);
+      setError('Erro ao atualizar cliente. Por favor, tente novamente.');
     } finally {
       setLoading(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="container mx-auto py-8">
+        <Card>
+          <CardContent>
+            <div className="text-center py-4">Carregando...</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!client) {
+    return (
+      <div className="container mx-auto py-8">
+        <Card>
+          <CardContent>
+            <div className="text-red-500">Cliente não encontrado</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-4">
-        <Button
-          variant="default"
-          onClick={() => navigate('/admin/clients')}
-          className="bg-orange-500 hover:bg-orange-600 text-black hover:text-black"
-        >
-          Voltar
-        </Button>
-      </div>
       <Card>
         <CardHeader>
-          <CardTitle>Criar Novo Cliente</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle>Editar Cliente</CardTitle>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/admin/clients')}
+              className="text-gray-700 hover:text-gray-900"
+            >
+              Voltar
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -363,13 +355,13 @@ const NewClient = () => {
                 />
               </div>
             </div>
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-4">
               <Button
                 type="submit"
                 disabled={loading}
                 className="bg-green-500 hover:bg-green-600 text-white"
               >
-                {loading ? 'Criando...' : 'Criar'}
+                {loading ? 'Atualizando...' : 'Atualizar'}
               </Button>
             </div>
             {error && (
@@ -384,4 +376,4 @@ const NewClient = () => {
   );
 };
 
-export default NewClient;
+export default EditClient;

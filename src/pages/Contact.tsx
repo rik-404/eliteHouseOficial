@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { supabase } from '@/lib/supabase';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,6 @@ const Contact = () => {
     name: '',
     email: '',
     phone: '',
-    subject: '',
     message: ''
   });
   
@@ -28,45 +28,42 @@ const Contact = () => {
     }));
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
-    // Simulate form submission
-    setTimeout(() => {
+
+    try {
+      // Criar novo cliente pendente no Supabase
+      const { data, error } = await supabase
+        .from('clients')
+        .insert([
+          {
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            status: 'pending',
+            notes: formData.message
+          }
+        ])
+        .select();
+
+      if (error) throw error;
+
+      // Resetar formulário e mostrar mensagem de sucesso
       setIsSubmitting(false);
       setFormData({
         name: '',
         email: '',
         phone: '',
-        subject: '',
         message: ''
       });
       
       toast.success('Mensagem enviada com sucesso! Entraremos em contato em breve.');
-    }, 1500);
-    
-    // Note: In a real implementation, here's where we would connect to Supabase
-    // to send the form data to the database
-    // For example:
-    /*
-    const { data, error } = await supabase
-      .from('contacts')
-      .insert([formData]);
-    
-    if (error) {
-      toast.error('Erro ao enviar mensagem. Tente novamente.');
-    } else {
-      toast.success('Mensagem enviada com sucesso! Entraremos em contato em breve.');
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        subject: '',
-        message: ''
-      });
+    } catch (error) {
+      console.error('Erro ao criar cliente:', error);
+      toast.error('Erro ao enviar mensagem. Por favor, tente novamente.');
+      setIsSubmitting(false);
     }
-    */
   };
 
   return (
@@ -101,9 +98,9 @@ const Contact = () => {
                     <div>
                       <h3 className="text-xl text-white mb-2">Nosso Endereço</h3>
                       <p className="text-muted-foreground">
-                        Av. Paulista, 1000<br />
-                        Bela Vista, São Paulo - SP<br />
-                        CEP: 01310-100
+                        Rua São João, 349<br />
+                        Centro, Piracicaba - SP<br />
+                        CEP: 13432-009
                       </p>
                     </div>
                   </div>
@@ -137,11 +134,15 @@ const Contact = () => {
                 
                 {/* Map Placeholder - Would be replaced with actual map */}
                 <div className="mt-8 rounded-lg overflow-hidden h-[300px] bg-muted">
-                  <div className="w-full h-full bg-muted flex items-center justify-center">
-                    <p className="text-muted-foreground">
-                      Mapa será integrado aqui usando Google Maps ou Mapbox via Supabase
-                    </p>
-                  </div>
+                  <iframe 
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3680.141910518957!2d-47.6435877239974!3d-22.722966179384933!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94c631a69bd0a71b%3A0x47d02a04ddfaf4ad!2sR.%20S%C3%A3o%20Jo%C3%A3o%2C%20349%20-%20Centro%20(Artemis)%2C%20Piracicaba%20-%20SP%2C%2013432-009!5e0!3m2!1spt-BR!2sbr!4v1746654416090!5m2!1spt-BR!2sbr" 
+                    width="100%" 
+                    height="100%" 
+                    style={{ border: '0' }}
+                    allowFullScreen
+                    loading="lazy" 
+                    referrerPolicy="no-referrer-when-downgrade"
+                  ></iframe>
                 </div>
               </div>
               
@@ -151,72 +152,54 @@ const Contact = () => {
                   <h2 className="text-2xl font-bold text-eliteBlue mb-6">Envie uma Mensagem</h2>
                   
                   <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-6">
                       <div className="space-y-2">
                         <Label htmlFor="name">Nome Completo</Label>
                         <Input 
-                          id="name"
-                          name="name"
-                          required
+                          id="name" 
+                          name="name" 
+                          required 
                           value={formData.name}
                           onChange={handleChange}
                           className="bg-muted border-muted"
                         />
                       </div>
-                      
                       <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
                         <Input 
-                          id="email"
-                          name="email"
-                          type="email"
-                          required
+                          type="email" 
+                          id="email" 
+                          name="email" 
+                          required 
                           value={formData.email}
                           onChange={handleChange}
                           className="bg-muted border-muted"
                         />
                       </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label htmlFor="phone">Telefone</Label>
                         <Input 
-                          id="phone"
-                          name="phone"
-                          type="tel"
+                          type="tel" 
+                          id="phone" 
+                          name="phone" 
                           value={formData.phone}
                           onChange={handleChange}
                           className="bg-muted border-muted"
                         />
                       </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="subject">Assunto</Label>
-                        <Input 
-                          id="subject"
-                          name="subject"
-                          required
-                          value={formData.subject}
-                          onChange={handleChange}
-                          className="bg-muted border-muted"
-                        />
-                      </div>
                     </div>
-                    
                     <div className="space-y-2">
                       <Label htmlFor="message">Mensagem</Label>
                       <Textarea 
-                        id="message"
-                        name="message"
-                        required
-                        rows={6}
+                        id="message" 
+                        name="message" 
+                        required 
                         value={formData.message}
                         onChange={handleChange}
                         className="bg-muted border-muted resize-none"
+                        rows={6}
                       />
                     </div>
-                    
                     <Button 
                       type="submit" 
                       className="w-full bg-eliteOrange hover:bg-eliteOrange-light text-white"

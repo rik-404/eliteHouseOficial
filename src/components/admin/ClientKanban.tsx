@@ -53,7 +53,7 @@ const ClientKanban: React.FC<ClientKanbanProps> = ({ clients, updateClientStatus
   const [isLoading, setIsLoading] = React.useState(false);
   const getBrokerName = (brokerId: string) => {
     if (!brokers) return 'Sem corretor';
-    const broker = brokers.find(b => b.id === brokerId);
+    const broker = brokers.find(b => b.broker_id === brokerId);
     return broker ? broker.name : 'Sem corretor';
   };
 
@@ -112,7 +112,7 @@ const ClientKanban: React.FC<ClientKanbanProps> = ({ clients, updateClientStatus
                               <div>
                                 <h3 className="font-medium text-sm">{client.name}</h3>
                                 <p className="text-xs text-gray-500">{client.email}</p>
-                                <p className="text-xs text-gray-500">Corretor: {getBrokerName(client.broker_id)}</p>
+                                <p className="text-xs text-gray-500">Corretor: <span className="font-bold">{getBrokerName(client.broker_id)}</span></p>
                               </div>
                               <Button
                                 variant="default"

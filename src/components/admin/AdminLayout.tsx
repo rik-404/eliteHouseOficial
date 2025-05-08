@@ -4,10 +4,20 @@ import { Home, MessageSquare, User, MoreVertical, LogOut } from 'lucide-react';
 import { useNavigate, Link, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { usePendingCount as useOriginalPendingCount } from '@/pages/admin/Clients';
+
+// Função para obter o número de pendentes apenas para admin
+const usePendingCount = () => {
+  const { user } = useAuth();
+  if (user?.role === 'corretor') return 0;
+  return useOriginalPendingCount();
+};
+import NotificationBadge from '@/components/NotificationBadge';
 
 const AdminLayout = () => {
   const navigate = useNavigate();
   const { user, confirmSignOut } = useAuth();
+  const pendingCount = usePendingCount();
 
   const handleLogout = async () => {
     try {
@@ -49,6 +59,9 @@ const AdminLayout = () => {
               <Link to="/admin/clients" className="flex items-center px-4 py-2 text-white hover:bg-[#242434] rounded transition-colors duration-200">
                 <User className="w-4 h-4 mr-3" />
                 Clientes
+                {user?.role !== 'corretor' && (
+                  <NotificationBadge count={pendingCount} className="ml-auto" />
+                )}
               </Link>
             </li>
           </ul>

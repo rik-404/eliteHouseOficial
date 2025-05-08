@@ -106,12 +106,10 @@ const Users = () => {
   };
 
   const filteredUsers = users.filter(user =>
-    // Desenvolvedores só podem ver corretores
-    (currentUser?.role === 'dev' && user.role === 'corretor') ||
-    // Administradores podem ver todos
-    (currentUser?.role === 'admin') ||
+    // Administradores e desenvolvedores podem ver todos
+    (currentUser?.role === 'admin' || currentUser?.role === 'dev') ||
     // Outros cargos não devem ver nada
-    (currentUser?.role !== 'dev' && currentUser?.role !== 'admin') &&
+    (currentUser?.role !== 'admin' && currentUser?.role !== 'dev') &&
     (!roleFilter || roleFilter === 'all' || user.role === roleFilter) &&
     (search ?
       user.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -195,8 +193,8 @@ const Users = () => {
                   <Switch
                     checked={user.active}
                     onCheckedChange={(checked) => {
-                      // Desenvolvedores só podem ativar/desativar corretores
-                      if (currentUser?.role === 'dev' && user.role === 'corretor') {
+                      // Desenvolvedores podem ativar/desativar qualquer usuário
+                      if (currentUser?.role === 'dev') {
                         handleToggleActive(user.id, checked);
                       } else if (currentUser?.role === 'admin') {
                         handleToggleActive(user.id, checked);

@@ -11,6 +11,26 @@ import { useNavigate } from 'react-router-dom';
 import { Switch } from '@/components/ui/switch';
 
 const UserEdit = () => {
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', localStorage.getItem('currentUser'))
+          .single();
+
+        if (error) throw error;
+        setCurrentUser(data);
+      } catch (error) {
+        console.error('Erro ao buscar usuário atual:', error);
+      }
+    };
+
+    fetchCurrentUser();
+  }, []);
   const { id } = useParams();
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
@@ -219,9 +239,15 @@ const UserEdit = () => {
                     <SelectValue placeholder="Selecionar cargo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="corretor">Corretor</SelectItem>
-                    <SelectItem value="admin">Administrador</SelectItem>
-                    <SelectItem value="dev">Desenvolvedor</SelectItem>
+                    {currentUser?.role === 'admin' ? (
+                      <>
+                        <SelectItem value="corretor">Corretor</SelectItem>
+                        <SelectItem value="admin">Administrador</SelectItem>
+                        <SelectItem value="dev">Desenvolvedor</SelectItem>
+                      </>
+                    ) : (
+                      <SelectItem value="corretor">Corretor</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>

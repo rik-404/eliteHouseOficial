@@ -13,26 +13,28 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import PasswordDialog from '@/components/admin/PasswordDialog';
 import { Card, CardContent } from '@/components/ui/card';
 import ClientKanban from '@/components/admin/ClientKanban';
+import AssignBrokerModal from '@/components/admin/AssignBrokerModal';
 
+
+const statusColors = {
+  'Novo': '#0096FF',
+  'Atendimento': '#20B2AA',
+  'Análise documental': '#8A2BE2',
+  'Análise bancária': '#9370DB',
+  'Aprovado': '#22C55E',
+  'Condicionado': '#FF8C00',
+  'Reprovado': '#E34234',
+  'Venda realizada': '#1E90FF',
+  'Distrato': '#555555'
+};
 
 const getStatusColor = (status: string) => {
-  const statusColors = {
-    Novo: '#22C55E',
-    Atendimento: '#F59E0B',
-    'Análise documental': '#F59E0B',
-    'Análise bancária': '#F59E0B',
-    Aprovado: '#22C55E',
-    Condicionado: '#F59E0B',
-    Reprovado: '#EF4444',
-    'Venda realizada': '#22C55E',
-    Distrato: '#EF4444'
-  };
   return statusColors[status] || '#6B7280';
 };
 
 const Clients = () => {
   const [clients, setClients] = useState<Client[]>([]);
-  const [search, setSearch] = useState('');
+
   const [selectedBroker, setSelectedBroker] = useState<string | null>(null);
 
   // Função para verificar se o usuário é corretor e encontrar seu broker_id
@@ -45,12 +47,19 @@ const Clients = () => {
   const [brokers, setBrokers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+  const [assignBrokerOpen, setAssignBrokerOpen] = useState(false);
+  const [clientToAssign, setClientToAssign] = useState<Client | null>(null);
   const [isKanbanView, setIsKanbanView] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  // Função para alternar entre ver todos e ver pendentes
+
 
   const statusOptions = [
     { value: 'all', label: 'Todos os status' },
@@ -61,7 +70,6 @@ const Clients = () => {
   ];
 
   useEffect(() => {
-    // Configurar o filtro de corretor baseado no usuário
     if (user?.role === 'corretor') {
       setSelectedBroker(user.broker_id);
     }
@@ -77,6 +85,40 @@ const Clients = () => {
     setDeleteDialogOpen(true);
   };
 
+  const handleAssignBroker = (client: Client) => {
+    if (user?.role === 'corretor') {
+      setError('Corretores não podem atribuir clientes');
+      return;
+    }
+    setClientToAssign(client);
+    setAssignBrokerOpen(true);
+  };
+
+  const handleBrokerSelect = async (brokerId: string) => {
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('clients')
+        .update({ broker_id: brokerId, status: 'Novo' })
+        .eq('id', clientToAssign?.id);
+
+      if (error) throw error;
+
+      // Atualizar o estado local do cliente
+      if (clientToAssign) {
+        setClients(clients.map(client => 
+          client.id === clientToAssign.id ? { ...client, broker_id: brokerId, status: 'Novo' } : client
+        ));
+      }
+      setError(null);
+    } catch (error) {
+      console.error('Erro ao atribuir corretor:', error);
+      setError('Erro ao atribuir corretor. Tente novamente mais tarde.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const confirmDelete = async () => {
     if (!clientToDelete) return;
 
@@ -90,7 +132,6 @@ const Clients = () => {
         throw deleteError;
       }
 
-      // Atualizar a lista de clientes
       await fetchClients();
       setDeleteDialogOpen(false);
     } catch (error) {
@@ -98,8 +139,6 @@ const Clients = () => {
       setError('Erro ao excluir cliente');
     }
   };
-
-
 
   const handleUpdateClientStatus = async (clientId: string, newStatus: string) => {
     try {
@@ -124,32 +163,11 @@ const Clients = () => {
     navigate(`/admin/clients/${clientId}/edit`);
   };
 
-
-
   const fetchClients = async () => {
     try {
       setLoading(true);
-      setError(null);
-      console.log('Iniciando busca de dados...');
 
-      // Buscar clientes
-      const query = supabase
-        .from('clients')
-        .select('*')
-        .order('id', { ascending: true });
-
-      // Se for corretor, filtrar apenas seus clientes
-      if (user?.role === 'corretor' && user?.broker_id) {
-        query.eq('broker_id', user.broker_id);
-      }
-
-      const { data: clientsData, error: clientsError } = await query;
-
-      if (clientsError) throw clientsError;
-      console.log('Clientes carregados:', clientsData);
-      setClients(clientsData || []);
-
-      // Buscar corretores com role 'corretor'
+      // Buscar corretores
       const { data: brokersData, error: brokersError } = await supabase
         .from('users')
         .select('id, broker_id, name')
@@ -157,41 +175,78 @@ const Clients = () => {
         .order('name');
 
       if (brokersError) throw brokersError;
-      
-      console.log('Dados brutos dos corretores:', brokersData);
-      
+
       if (!brokersData || brokersData.length === 0) {
-        console.log('Nenhum corretor encontrado com broker_id');
         setBrokers([]);
-        setError('Nenhum corretor encontrado no sistema');
       } else {
-        // Converter os dados para usar o broker_id (UUID)
         const formattedBrokers = brokersData.map(broker => ({
-          id: broker.broker_id, // Usando broker_id (UUID) para o select
-          broker_id: broker.broker_id, // UUID (para a tabela)
+          broker_id: broker.broker_id,
           name: broker.name
         }));
-        
-        console.log('Corretores formatados:', formattedBrokers);
         setBrokers(formattedBrokers);
       }
+
+      // Contar pendentes
+      const { data: pendingData } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('status', 'pending');
+      setPendingCount(pendingData?.length || 0);
+
+      // Buscar clientes
+      let query = supabase
+        .from('clients')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (selectedBroker) {
+        query = query.eq('broker_id', selectedBroker);
+      }
+
+      if (selectedStatus) {
+        query = query.eq('status', selectedStatus);
+      }
+
+
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        setClients([]);
+      } else {
+        const formattedClients = data.map(client => ({
+          ...client,
+          created_at: new Date(client.created_at).toLocaleDateString('pt-BR', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        }));
+        setClients(formattedClients);
+      }
     } catch (error) {
-      console.error('Erro ao buscar dados:', error);
-      setError('Erro ao carregar dados. Por favor, tente novamente.');
+      console.error('Erro ao buscar clientes:', error);
+      setError('Erro ao buscar clientes. Tente novamente mais tarde.');
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchClients();
+  }, [selectedBroker, selectedStatus]);
+
   const filteredClients = useMemo(() => {
     return clients.filter(client => {
-      const brokerMatch = !selectedBroker || selectedBroker === 'all' || client.broker_id === selectedBroker;
-      const statusMatch = !selectedStatus || selectedStatus === 'all' || client.status === selectedStatus;
-      return brokerMatch && statusMatch;
+      return (!selectedBroker || client.broker_id === selectedBroker) &&
+             (!selectedStatus || selectedStatus === 'all' || client.status === selectedStatus);
     });
   }, [clients, selectedBroker, selectedStatus]);
 
-  // Função para encontrar o nome do corretor
   const getBrokerName = (brokerId: string) => {
     const broker = brokers.find(b => b.broker_id === brokerId);
     return broker ? broker.name : 'Corretor não encontrado';
@@ -225,63 +280,50 @@ const Clients = () => {
         </DialogContent>
       </Dialog>
 
+      <AssignBrokerModal
+        open={assignBrokerOpen}
+        brokers={brokers}
+        selectedBroker={clientToAssign?.broker_id}
+        onBrokerSelect={handleBrokerSelect}
+        onClose={() => setAssignBrokerOpen(false)}
+      />
+
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold">Clientes</h1>
+
           <Button
             variant="outline"
             onClick={() => setIsKanbanView(!isKanbanView)}
+            className="flex items-center gap-2"
           >
             {isKanbanView ? 'Ver Lista' : 'Ver Kanban'}
+            <span className="text-sm">(L)</span>
           </Button>
-          <div className="flex gap-4">
-            {user?.role === 'corretor' ? (
-              <div className="text-gray-500">
-                Corretor: {user?.name || user?.username}
-              </div>
-            ) : (
-              <Select
-                value={selectedBroker || 'all'}
-                onValueChange={setSelectedBroker}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecionar corretor" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Corretores</SelectItem>
-                  {brokers.map((broker) => (
-                    <SelectItem key={broker.id} value={broker.id}>
-                      {broker.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            <Select
-              value={selectedStatus || 'all'}
-              onValueChange={setSelectedStatus}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecionar status" />
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-            <Button
-              variant="default"
-              className="bg-green-500 hover:bg-green-600 text-white"
-              onClick={handleNewClient}
-            >
+          <Select
+            value={selectedBroker}
+            onValueChange={setSelectedBroker}
+            disabled={!brokers.length || user?.role === 'corretor'}
+          >
+            <SelectTrigger className="bg-white border border-gray-300 rounded-lg py-2 pl-4 pr-8 text-left shadow-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+              {user?.role === 'corretor' ? getBrokerName(user.broker_id) : (selectedBroker ? getBrokerName(selectedBroker) : 'Selecione um corretor')}
+            </SelectTrigger>
+            <SelectContent key="brokers-select-content">
+              <SelectItem value="all">Todos os corretores</SelectItem>
+              {brokers.map(broker => (
+                <SelectItem key={broker.id} value={broker.broker_id}>{broker.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant="default"
+            className="bg-green-500 hover:bg-green-600 text-white"
+            onClick={handleNewClient}
+          >
             Novo Cliente
           </Button>
         </div>
       </div>
+
       {loading ? (
         <div className="text-center py-4">Carregando...</div>
       ) : error ? (
@@ -306,8 +348,7 @@ const Clients = () => {
                       <TableHead>Telefone</TableHead>
                       <TableHead>CPF</TableHead>
                       <TableHead>Corretor</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="w-40">Ações</TableHead>
+                      <TableHead className="w-40 text-center">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -318,42 +359,44 @@ const Clients = () => {
                         <TableCell>{client.phone}</TableCell>
                         <TableCell>{client.cpf}</TableCell>
                         <TableCell>{getBrokerName(client.broker_id)}</TableCell>
-                        <TableCell>
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            {client.status}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="default"
-                              className="bg-yellow-500 hover:bg-yellow-600 text-white"
-                              size="sm"
-                              onClick={() => handleEditClient(client.id)}
+                        <TableCell className="text-center">
+                          <div className="flex flex-col items-center gap-2">
+                            <span className="text-xs font-medium mb-1">Status</span>
+                            <span
+                              className="px-2 py-1 rounded-full text-xs font-medium text-white mb-2"
+                              style={{ background: getStatusColor(client.status), minWidth: 90, textAlign: 'center' }}
                             >
-                              Editar
-                            </Button>
-                            {user?.role === 'corretor' ? (
+                              {client.status}
+                            </span>
+                            {client.status === 'pending' ? (
                               <Button
                                 variant="outline"
-                                className="bg-gray-200 hover:bg-gray-300 text-gray-500 cursor-not-allowed"
                                 size="sm"
-                                onClick={() => {
-                                  setError('Corretores não podem excluir clientes');
-                                  setTimeout(() => setError(null), 3000);
-                                }}
+                                onClick={() => handleAssignBroker(client)}
+                                className="w-full"
                               >
-                                Excluir
+                                Atribuir ao Corretor
                               </Button>
                             ) : (
-                              <Button
-                                variant="default"
-                                className="bg-red-500 hover:bg-red-600 text-white"
-                                size="sm"
-                                onClick={() => handleDelete(client)}
-                              >
-                                Excluir
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="bg-yellow-400 hover:bg-yellow-500 text-white border-none"
+                                  onClick={() => handleEditClient(client.id)}
+                                >
+                                  Editar
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => user?.role !== 'corretor' && handleDelete(client)}
+                                  disabled={user?.role === 'corretor'}
+                                  className={`cursor-not-allowed ${user?.role === 'corretor' ? 'bg-gray-400 hover:bg-gray-400 text-gray-100 border-gray-300' : ''}`}
+                                >
+                                  Excluir
+                                </Button>
+                              </div>
                             )}
                           </div>
                         </TableCell>
@@ -371,3 +414,26 @@ const Clients = () => {
 };
 
 export default Clients;
+
+// Função para obter o número de pendentes
+export const usePendingCount = () => {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    const fetchPendingCount = async () => {
+      try {
+        const { data: pendingData } = await supabase
+          .from('clients')
+          .select('id')
+          .eq('status', 'pending');
+        setCount(pendingData?.length || 0);
+      } catch (error) {
+        console.error('Erro ao buscar pendentes:', error);
+      }
+    };
+
+    fetchPendingCount();
+  }, []);
+
+  return count;
+};
