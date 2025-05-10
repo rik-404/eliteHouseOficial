@@ -1,12 +1,11 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Bed, Bath, ArrowRight, MapPin, Square, Car } from 'lucide-react';
+import { Bed, Bath, MapPin, Square, Car } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 export type PropertyType = {
-  id: number;
+  id: string;
   reference: string;
   title: string;
   price: number;
@@ -28,6 +27,7 @@ interface PropertyCardProps {
 }
 
 const PropertyCard = ({ property, featured = false }: PropertyCardProps) => {
+  const cardBorder = featured ? 'border-2 border-eliteOrange' : 'border-2 border-orange-500';
   const formattedPrice = new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
@@ -35,8 +35,7 @@ const PropertyCard = ({ property, featured = false }: PropertyCardProps) => {
   }).format(property.price);
 
   return (
-    <div className={`property-card group ${featured ? 'h-full' : ''}`}>
-      {/* Image Container */}
+    <div className={`property-card group ${featured ? 'h-full' : ''} ${cardBorder}`}>
       <div className="relative overflow-hidden h-[200px]">
         {/* Property Image */}
         <img 
@@ -75,22 +74,28 @@ const PropertyCard = ({ property, featured = false }: PropertyCardProps) => {
         </div>
         
         <div className="flex justify-between mb-4 text-sm">
-          <div className="flex items-center">
-            <Bed size={16} className="text-eliteOrange mr-1" />
-            <span>{property.bedrooms} {property.bedrooms === 1 ? 'Quarto' : 'Quartos'}</span>
-          </div>
-          <div className="flex items-center">
-            <Bath size={16} className="text-eliteOrange mr-1" />
-            <span>{property.bathrooms} {property.bathrooms === 1 ? 'Banheiro' : 'Banheiros'}</span>
-          </div>
+          {property.type !== 'Terreno' ? (
+            <>
+              <div className="flex items-center">
+                <Bed size={16} className="text-eliteOrange mr-1" />
+                <span>{property.bedrooms} {property.bedrooms === 1 ? 'Quarto' : 'Quartos'}</span>
+              </div>
+              <div className="flex items-center">
+                <Bath size={16} className="text-eliteOrange mr-1" />
+                <span>{property.bathrooms} {property.bathrooms === 1 ? 'Banheiro' : 'Banheiros'}</span>
+              </div>
+            </>
+          ) : null}
           <div className="flex items-center">
             <Square size={16} className="text-eliteOrange mr-1" />
             <span>{property.area} m²</span>
           </div>
-          <div className="flex items-center">
-            <Car size={16} className="text-eliteOrange mr-1" />
-            <span>{property.garage || 0} {property.garage === 1 ? 'Vaga' : 'Vagas'}</span>
-          </div>
+          {property.type !== 'Terreno' ? (
+            <div className="flex items-center">
+              <Car size={16} className="text-eliteOrange mr-1" />
+              <span>{property.garage || 0} {property.garage === 1 ? 'Vaga' : 'Vagas'}</span>
+            </div>
+          ) : null}
         </div>
         
         <Link to={`/property/${property.id}`}>
@@ -98,8 +103,7 @@ const PropertyCard = ({ property, featured = false }: PropertyCardProps) => {
             variant="outline" 
             className="w-full border-eliteOrange text-eliteOrange hover:bg-eliteOrange hover:text-white group"
           >
-            Ver Detalhes
-            <ArrowRight size={16} className="ml-2 transition-transform group-hover:translate-x-1" />
+            Ver detalhes
           </Button>
         </Link>
       </div>

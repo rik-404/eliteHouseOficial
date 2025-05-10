@@ -18,6 +18,9 @@ interface ClientKanbanProps {
   updateClientStatus: (clientId: string, newStatus: string) => Promise<void>;
   loading: boolean;
   brokers: any[];
+  user: {
+    role: string;
+  };
 }
 
 const statuses = [
@@ -48,7 +51,7 @@ const getStatusColor = (status: string) => {
   return statusColors[status] || '#6B7280';
 };
 
-const ClientKanban: React.FC<ClientKanbanProps> = ({ clients, updateClientStatus, loading, brokers }) => {
+const ClientKanban: React.FC<ClientKanbanProps> = ({ clients, updateClientStatus, loading, brokers, user }) => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = React.useState(false);
   const getBrokerName = (brokerId: string) => {
@@ -71,21 +74,25 @@ const ClientKanban: React.FC<ClientKanbanProps> = ({ clients, updateClientStatus
 
   const renderStatusColumn = (status: string) => {
     const clientsInStatus = getClientsInStatus(status);
+    const isRestrictedStatus = !(user.role === 'admin' || user.role === 'dev') && 
+      (status === 'Análise bancária' || status === 'Aprovado' || status === 'Condicionado' || status === 'Reprovado');
     return (
-      <div key={status} className="w-1/5 px-1">
-        <div 
-          className="rounded-md overflow-hidden" 
-          style={{ backgroundColor: getStatusColor(status) }}
-        >
+      <div key={status} className="min-w-[400px] px-4">
+        <div className="rounded-md overflow-hidden" style={{ backgroundColor: getStatusColor(status) }}>
           <div className="flex items-center justify-between p-2 text-white">
-            <h3 className="text-sm font-semibold">{status}</h3>
+            <h3 className="text-sm font-semibold whitespace-nowrap">{status}</h3>
             <div className="bg-white bg-opacity-30 rounded-full h-5 w-5 flex items-center justify-center text-white text-xs">
               {clientsInStatus.length}
             </div>
           </div>
         </div>
+        {isRestrictedStatus && (
+          <div className="mt-2 text-sm text-red-500 px-2">
+            Clientes neste status não podem ser movidos
+          </div>
+        )}
 
-        <div className="mt-1 bg-white rounded-md p-1 min-h-[150px] max-h-[300px] overflow-y-auto border border-gray-100">
+        <div className="mt-1 bg-white rounded-md p-1 min-h-[150px] border border-gray-100 w-full">
           <Droppable droppableId={status}>
             {(provided) => (
               <div
@@ -97,9 +104,14 @@ const ClientKanban: React.FC<ClientKanbanProps> = ({ clients, updateClientStatus
                     Nenhum cliente neste status
                   </div>
                 ) : (
-                  <div className="space-y-1">
+                  <div className="space-y-3">
                     {clientsInStatus.map((client, index) => (
-                      <Draggable key={client.id} draggableId={client.id} index={index}>
+                      <Draggable
+                        key={client.id}
+                        draggableId={client.id}
+                        index={index}
+                        isDragDisabled={client.status === 'Análise bancária' || client.status === 'Aprovado' || client.status === 'Condicionado' || client.status === 'Reprovado'}
+                      >
                         {(provided) => (
                           <div
                             ref={provided.innerRef}
@@ -115,10 +127,15 @@ const ClientKanban: React.FC<ClientKanbanProps> = ({ clients, updateClientStatus
                                 <p className="text-xs text-gray-500">Corretor: <span className="font-bold">{getBrokerName(client.broker_id)}</span></p>
                               </div>
                               <Button
-                                variant="default"
-                                className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                                variant="outline"
                                 size="sm"
-                                onClick={() => navigate(`/admin/clients/${client.id}/edit`)}
+                                className={`bg-yellow-400 hover:bg-yellow-500 text-white border-none ${user?.role === 'corretor' && (client.status === 'Análise bancária' || client.status === 'Aprovado' || client.status === 'Condicionado' || client.status === 'Reprovado') ? 'cursor-not-allowed bg-gray-400 hover:bg-gray-400 text-gray-100' : ''}`}
+                                onClick={() => {
+                                  if (user?.role === 'corretor' && (client.status === 'Análise bancária' || client.status === 'Aprovado' || client.status === 'Condicionado' || client.status === 'Reprovado')) {
+                                    return;
+                                  }
+                                  navigate(`/admin/clients/${client.id}/edit`);
+                                }}
                               >
                                 Editar
                               </Button>
@@ -141,98 +158,69 @@ const ClientKanban: React.FC<ClientKanbanProps> = ({ clients, updateClientStatus
   const onDragEnd = async (result: any) => {
     if (!result.destination) return;
 
-    const sourceStatus = result.source.droppableId;
-    const destinationStatus = result.destination.droppableId;
+    if (result.source.droppableId !== result.destination.droppableId) {
+      const [source, destination] = [result.source.droppableId, result.destination.droppableId];
+      const sourceClients = getClientsInStatus(source);
+      const destinationClients = getClientsInStatus(destination);
+      const draggedClient = sourceClients[result.source.index];
 
-    if (sourceStatus === destinationStatus) return;
+      // Verificar se o cliente está em um status restrito
+      if (draggedClient.status === 'Análise bancária' || draggedClient.status === 'Aprovado' || draggedClient.status === 'Condicionado' || draggedClient.status === 'Reprovado') {
+        alert('Este cliente não pode ser movido para outro status');
+        return;
+      }
 
-    try {
-      setIsLoading(true);
-      await updateClientStatus(result.draggableId, destinationStatus);
-    } catch (error) {
-      console.error('Erro ao atualizar status:', error);
-    } finally {
-      setIsLoading(false);
+      // Verificar permissões para corretores
+
+      try {
+        setIsLoading(true);
+        await updateClientStatus(draggedClient.id, destination);
+      } catch (error) {
+        console.error('Erro ao atualizar status do cliente:', error);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
   if (loading) {
     return (
       <div className="p-4">
-        <Card className="w-full">
-          <CardContent className="p-4">
-            <div className="space-y-2">
-              <div className="grid grid-cols-5 gap-2">
-                {firstRowStatuses.map(status => (
-                  <div key={status} className="w-1/5 px-1">
-                    <div className="rounded-md overflow-hidden" style={{ backgroundColor: getStatusColor(status) }}>
-                      <div className="flex items-center justify-between p-2 text-white">
-                        <h3 className="text-sm font-semibold">{status}</h3>
-                        <div className="bg-white bg-opacity-30 rounded-full h-5 w-5 flex items-center justify-center text-white text-xs">0</div>
-                      </div>
-                    </div>
-                    <div className="mt-1 bg-white rounded-md p-1 min-h-[150px] max-h-[300px] overflow-y-auto border border-gray-100">
-                      <div className="animate-pulse">
-                        <div className="space-y-2">
-                          {[1, 2, 3].map(i => (
-                            <div key={i} className="bg-gray-100 p-2 rounded-md">
-                              <div className="h-4 bg-gray-200 rounded w-3/4 mb-1"></div>
-                              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+        <div className="flex gap-2 overflow-x-auto whitespace-nowrap w-full">
+          {statuses.map((status) => (
+            <div key={status} className="min-w-[400px] px-4">
+              <div className="rounded-md overflow-hidden" style={{ backgroundColor: getStatusColor(status) }}>
+                <div className="flex items-center justify-between p-2 text-white">
+                  <h3 className="text-sm font-semibold">{status}</h3>
+                  <div className="bg-white bg-opacity-30 rounded-full h-5 w-5 flex items-center justify-center text-white text-xs">0</div>
+                </div>
               </div>
-              <div className="flex">
-                {secondRowStatuses.map(status => (
-                  <div key={status} className="w-1/5 px-1">
-                    <div className="rounded-md overflow-hidden" style={{ backgroundColor: getStatusColor(status) }}>
-                      <div className="flex items-center justify-between p-2 text-white">
-                        <h3 className="text-sm font-semibold">{status}</h3>
-                        <div className="bg-white bg-opacity-30 rounded-full h-5 w-5 flex items-center justify-center text-white text-xs">0</div>
+              <div className="mt-2 bg-white rounded-md p-3 min-h-[300px] max-h-[500px] overflow-y-auto border border-gray-100">
+                <div className="animate-pulse">
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="bg-gray-100 p-2 rounded-md">
+                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-1"></div>
+                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
                       </div>
-                    </div>
-                    <div className="mt-1 bg-white rounded-md p-1 min-h-[150px] max-h-[300px] overflow-y-auto border border-gray-100">
-                      <div className="animate-pulse">
-                        <div className="space-y-2">
-                          {[1, 2, 3].map(i => (
-                            <div key={i} className="bg-gray-100 p-2 rounded-md">
-                              <div className="h-4 bg-gray-200 rounded w-3/4 mb-1"></div>
-                              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
     <div className="p-4">
-      <Card className="w-full">
-        <CardContent className="p-4">
-          <DragDropContext onDragEnd={onDragEnd}>
-            <div className="space-y-2">
-              <div className="flex">
-                {firstRowStatuses.map(renderStatusColumn)}
-              </div>
-              <div className="flex">
-                {secondRowStatuses.map(renderStatusColumn)}
-              </div>
-            </div>
-          </DragDropContext>
-        </CardContent>
-      </Card>
+      <DragDropContext onDragEnd={onDragEnd}>
+        <div className="flex gap-2 overflow-x-auto whitespace-nowrap w-full">
+          {statuses.map(renderStatusColumn)}
+        </div>
+      </DragDropContext>
     </div>
   );
 };

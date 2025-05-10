@@ -1,0 +1,2 @@
+id,reference,title,type,location,area,bedrooms,bathrooms,garage,price,description,image_url,featured,created_at,updated_at,city,uf
+6c51e205-094c-4677-b376-e3ad3b45b6ff,ref 0000001,casa teste,Apartamento,São jorge,505,2,3,1,22222222.00,2,"https://images.homify.com/c_fill,f_auto,q_auto,w_740/v1444877728/p/photo/image/1006211/ext2.jpg",true,2025-05-08 07:32:06.948791+00,2025-05-08 08:49:18.138459+00,Piracicaba,sp

@@ -177,7 +177,7 @@ const Clients = () => {
   };
 
   const handleNewClient = () => {
-    navigate('/admin/new-client/new');
+    navigate('/admin/clients/new');
   };
 
   const handleEditClient = (clientId: string) => {
@@ -207,7 +207,7 @@ const Clients = () => {
         setBrokers(formattedBrokers);
       }
 
-      // Contar pendentes
+      // Contar clientes pendentes (status 'pending')
       const { data: pendingData } = await supabase
         .from('clients')
         .select('id')
@@ -414,6 +414,7 @@ const Clients = () => {
               updateClientStatus={handleUpdateClientStatus}
               loading={loading}
               brokers={brokers}
+              user={user}
             />
           ) : (
             <div className="space-y-4">
@@ -446,36 +447,43 @@ const Clients = () => {
                             >
                               {client.status}
                             </span>
-                            {client.status === 'pending' ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleAssignBroker(client)}
-                                className="w-full"
-                              >
-                                Atribuir ao Corretor
-                              </Button>
-                            ) : (
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="bg-yellow-400 hover:bg-yellow-500 text-white border-none"
-                                  onClick={() => handleEditClient(client.id)}
-                                >
-                                  Editar
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => user?.role !== 'corretor' && handleDelete(client)}
-                                  disabled={user?.role === 'corretor'}
-                                  className={`cursor-not-allowed ${user?.role === 'corretor' ? 'bg-gray-400 hover:bg-gray-400 text-gray-100 border-gray-300' : ''}`}
-                                >
-                                  Excluir
-                                </Button>
-                              </div>
-                            )}
+                            {user?.role === 'corretor' && (client.status === 'Análise bancária' || client.status === 'Aprovado' || client.status === 'Condicionado' || client.status === 'Reprovado') ? (
+                                <div className="text-red-500 text-sm">Não pode editar</div>
+                              ) : client.status === 'pending' ? (
+                               <Button
+                                 variant="outline"
+                                 size="sm"
+                                 onClick={() => handleAssignBroker(client)}
+                                 className="w-full"
+                               >
+                                 Atribuir ao Corretor
+                               </Button>
+                             ) : (
+                               <div className="flex gap-2">
+                                 <Button
+                                   variant="outline"
+                                   size="sm"
+                                   className={`bg-yellow-400 hover:bg-yellow-500 text-white border-none ${user?.role === 'corretor' && (client.status === 'Análise bancária' || client.status === 'Aprovado' || client.status === 'Condicionado' || client.status === 'Reprovado') ? 'cursor-not-allowed bg-gray-400 hover:bg-gray-400 text-gray-100' : ''}`}
+                                   onClick={() => {
+                                     if (user?.role === 'corretor' && (client.status === 'Análise bancária' || client.status === 'Aprovado' || client.status === 'Condicionado' || client.status === 'Reprovado')) {
+                                       return;
+                                     }
+                                     handleEditClient(client.id);
+                                   }}
+                                 >
+                                   Editar
+                                 </Button>
+                                 <Button
+                                   variant="destructive"
+                                   size="sm"
+                                   onClick={() => user?.role !== 'corretor' && handleDelete(client)}
+                                   disabled={user?.role === 'corretor'}
+                                   className={`cursor-not-allowed ${user?.role === 'corretor' ? 'bg-gray-400 hover:bg-gray-400 text-gray-100 border-gray-300' : ''}`}
+                                 >
+                                   Excluir
+                                 </Button>
+                               </div>
+                             )}
                           </div>
                         </TableCell>
                       </TableRow>

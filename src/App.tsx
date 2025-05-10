@@ -10,6 +10,7 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import Properties from "./pages/Properties";
+import PropertyDetails from "./pages/PropertyDetails";
 import { ReactElement } from 'react';
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Login from "./components/auth/Login";
@@ -48,8 +49,8 @@ const App = () => (
                 />
               ))}
             </Route>
-
             <Route path="/" element={<Index />} />
+            <Route path="/property/:id" element={<PropertyDetails />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/properties" element={<Properties />} />

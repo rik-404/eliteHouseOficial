@@ -9,11 +9,12 @@ const Footer = () => {
       <div className="container-custom py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
-            <div className="flex items-center space-x-2 mb-4">
-              <span className="text-2xl font-bold bg-gradient-to-r from-eliteOrange to-eliteOrange-light bg-clip-text text-transparent">
-                Elite
-              </span>
-              <span className="text-2xl font-light text-white">House</span>
+            <div className="mb-4">
+              <img 
+                src="/src/img/icon.png" 
+                alt="Elite House" 
+                className="h-10"
+              />
             </div>
             <p className="text-muted-foreground mb-6">
               Seu parceiro de confiança para encontrar o imóvel dos seus sonhos. Estamos no mercado há mais de 15 anos oferecendo as melhores oportunidades.
@@ -22,7 +23,7 @@ const Footer = () => {
               <a href="#" className="text-white hover:text-eliteOrange">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-facebook"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
               </a>
-              <a href="#" className="text-white hover:text-eliteOrange">
+              <a href="https://www.instagram.com/elitepiracicaba/" target="_blank" rel="noopener noreferrer" className="text-white hover:text-eliteOrange">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-instagram"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line></svg>
               </a>
               <a href="#" className="text-white hover:text-eliteOrange">
@@ -54,11 +55,7 @@ const Footer = () => {
                   Contato
                 </Link>
               </li>
-              <li>
-                <Link to="/privacy" className="text-muted-foreground hover:text-eliteOrange transition-colors">
-                  Política de Privacidade
-                </Link>
-              </li>
+
             </ul>
           </div>
           
@@ -67,15 +64,15 @@ const Footer = () => {
             <div className="space-y-4">
               <div className="flex items-center space-x-3">
                 <MapPin className="text-eliteOrange" size={18} />
-                <span className="text-muted-foreground">Av. Paulista, 1000 - São Paulo, SP</span>
+                <span className="text-muted-foreground">Rua São João, 349 - Centro, Piracicaba - SP</span>
               </div>
               <div className="flex items-center space-x-3">
                 <Phone className="text-eliteOrange" size={18} />
-                <span className="text-muted-foreground">(11) 91234-5678</span>
+                <span className="text-muted-foreground">+55 19 98454-5862</span>
               </div>
               <div className="flex items-center space-x-3">
                 <Mail className="text-eliteOrange" size={18} />
-                <span className="text-muted-foreground">contato@elitehouse.com.br</span>
+                <span className="text-muted-foreground">elitehousepiracicaba@gmail.com</span>
               </div>
             </div>
           </div>

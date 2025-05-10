@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,57 +7,56 @@ import { Slider } from '@/components/ui/slider';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
-export const neighborhoods = [
-  'Centro',
-  'São Dimas',
-  'Alemães',
-  'Alto',
-  'Paulista',
-  'Vila Rezende',
-  'Nova Piracicaba',
-  'Piracicamirim',
-  'Vila Independência',
-  'Jardim Europa',
-  'Jardim Elite',
-  'Cidade Alta',
-  'Paulicéia',
-  'Vila Monteiro',
-  'Jardim Nova América',
-  'Jardim Petrópolis',
-  'Santa Terezinha',
-  'Vila Sônia',
-  'Jardim São Paulo',
-  'Dois Córregos',
-  'Loteamento Santa Rosa',
-  'Jardim Ipanema',
-  'Jardim Parque Jupiá',
-  'Jardim Abaeté',
-  'Jardim Astúrias I',
-  'Jardim Astúrias II',
-  'Jardim Califórnia',
-  'Jardim Conceição',
-  'Jardim dos Sábias',
-  'Jardim Esplanada',
-  'Jardim Noiva da Colina',
-  'Jardim Pompéia',
-  'Jardim São Luiz',
-  'Vila Industrial',
-  'Vila Bressani',
-  'Vila Pacaembu',
-  'Jardim Caxambu',
-  'Jardim São Francisco',
-  'Jardim São Judas Tadeu',
-  'Jardim Vera Cruz'
-];
+import { supabase } from '@/lib/supabase';
 
 const PropertySearch = () => {
   const navigate = useNavigate();
   const [location, setLocation] = useState('');
   const [type, setType] = useState('all');
-  const [parking, setParking] = useState('any');
-  const [bedrooms, setBedrooms] = useState('any');
-  
+  const [neighborhoods, setNeighborhoods] = useState<string[]>([]);
+  const [propertyTypes, setPropertyTypes] = useState<string[]>(['Todos os Tipos']);
+
+  useEffect(() => {
+    const loadNeighborhoods = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('properties')
+          .select('location')
+          .order('location', { ascending: true });
+
+        if (error) throw error;
+        
+        if (data) {
+          const uniqueNeighborhoods = [...new Set(data.map(property => property.location))];
+          setNeighborhoods(['Todos', ...uniqueNeighborhoods]);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar bairros:', error);
+      }
+    };
+
+    const loadPropertyTypes = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('properties')
+          .select('type')
+          .order('type', { ascending: true });
+
+        if (error) throw error;
+        
+        if (data) {
+          const uniqueTypes = [...new Set(data.map(property => property.type))];
+          setPropertyTypes(['Todos os Tipos', ...uniqueTypes]);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar tipos de imóveis:', error);
+      }
+    };
+
+    loadNeighborhoods();
+    loadPropertyTypes();
+  }, []);
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
@@ -65,8 +64,6 @@ const PropertySearch = () => {
     const searchParams = new URLSearchParams();
     if (location) searchParams.set('location', location);
     if (type !== 'all') searchParams.set('type', type);
-    if (parking !== 'any') searchParams.set('parking', parking);
-    if (bedrooms !== 'any') searchParams.set('bedrooms', bedrooms);
     
     navigate(`/properties?${searchParams.toString()}`);
   };
@@ -83,7 +80,7 @@ const PropertySearch = () => {
         
         <div className="bg-card rounded-2xl p-6 md:p-10 shadow-lg">
           <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="location">Localização</Label>
                 <Select
@@ -113,47 +110,11 @@ const PropertySearch = () => {
                     <SelectValue placeholder="Tipo de imóvel" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todos os Tipos</SelectItem>
-                    <SelectItem value="Apartamento">Apartamento</SelectItem>
-                    <SelectItem value="Casa">Casa</SelectItem>
-                    <SelectItem value="Cobertura">Cobertura</SelectItem>
-                    <SelectItem value="Terreno">Terreno</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="parking">Vagas na Garagem</Label>
-                <Select value={parking} onValueChange={setParking}>
-                  <SelectTrigger id="parking">
-                    <SelectValue placeholder="Número de vagas" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="any">Qualquer número</SelectItem>
-                    <SelectItem value="1">1 vaga</SelectItem>
-                    <SelectItem value="2">2 vagas</SelectItem>
-                    <SelectItem value="3">3 vagas</SelectItem>
-                    <SelectItem value="4">4 vagas ou mais</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="bedrooms">Quartos</Label>
-                <Select 
-                  value={bedrooms}
-                  onValueChange={setBedrooms}
-                >
-                  <SelectTrigger id="bedrooms">
-                    <SelectValue placeholder="Número de quartos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="any">Qualquer</SelectItem>
-                    <SelectItem value="1">1+</SelectItem>
-                    <SelectItem value="2">2+</SelectItem>
-                    <SelectItem value="3">3+</SelectItem>
-                    <SelectItem value="4">4+</SelectItem>
-                    <SelectItem value="5">5+</SelectItem>
+                    {propertyTypes.map((type) => (
+                      <SelectItem key={type} value={type === 'Todos os Tipos' ? 'all' : type}>
+                        {type}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

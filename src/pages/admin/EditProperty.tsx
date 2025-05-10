@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +14,7 @@ const EditProperty = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [property, setProperty] = useState({
     reference: '',
     title: '',
@@ -136,7 +138,8 @@ const EditProperty = () => {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Editar Imóvel</h2>
-      <form onSubmit={handleSubmit} id="property-form" className="space-y-6">
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <form onSubmit={handleSubmit} id="property-form" className="space-y-6">
         <input type="hidden" id="property-id" value={id} />
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -285,23 +288,37 @@ const EditProperty = () => {
           </div>
           <div className="admin-form-group">
             <Label htmlFor="property-featured">Destaque</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="property-featured"
-                name="featured"
-                type="checkbox"
-                checked={property.featured}
-                onChange={handleCheckboxChange}
-              />
-              <Label htmlFor="property-featured">Sim</Label>
-            </div>
+            {user?.role === 'corretor' ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="property-featured"
+                  name="featured"
+                  checked={property.featured}
+                  disabled
+                />
+                <span className="text-destructive">Você não tem permissão para alterar o status de destaque</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="property-featured"
+                  name="featured"
+                  checked={property.featured}
+                  onChange={handleCheckboxChange}
+                />
+                <Label htmlFor="property-featured">Sim</Label>
+              </div>
+            )}
           </div>
         </div>
 
         <Button type="submit" className="w-full bg-eliteOrange hover:bg-eliteOrange-light text-white">
           Salvar Alterações
         </Button>
-      </form>
+        </form>
+      </div>
     </div>
   );
 };

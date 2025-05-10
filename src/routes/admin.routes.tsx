@@ -7,11 +7,11 @@ const Users = lazy(() => import('../pages/admin/Users'));
 const CreateUser = lazy(() => import('../pages/admin/CreateUser'));
 const UserEdit = lazy(() => import('../pages/admin/UserEdit'));
 const Profile = lazy(() => import('../pages/admin/Profile'));
-const Properties = lazy(() => import('../pages/admin/Properties'));
+const Properties = lazy(() => import('../pages/admin/Properties').then(module => ({ default: module.Properties })));
+
 const CreateProperty = lazy(() => import('../pages/admin/CreateProperty'));
 const EditProperty = lazy(() => import('../pages/admin/EditProperty'));
 const Clients = lazy(() => import('../pages/admin/Clients'));
-const CreateClient = lazy(() => import('../pages/admin/CreateClient'));
 const EditClient = lazy(() => import('../pages/admin/EditClient'));
 const NewClient = lazy(() => import('../pages/admin/NewClient'));
 const SupabaseAccess = lazy(() => import('../pages/admin/SupabaseAccess'));
@@ -57,10 +57,6 @@ export const adminRoutes: RouteObject[] = [
   {
     path: '/admin/clients',
     element: <Clients />
-  },
-  {
-    path: '/admin/clients/create',
-    element: <CreateClient />
   },
   {
     path: '/admin/clients/new',

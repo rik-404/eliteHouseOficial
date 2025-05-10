@@ -2,15 +2,19 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import OptimizedImage from '@/components/ui/optimized-image';
 
 const Hero = () => {
   return (
     <div className="relative h-[80vh] flex items-center">
       {/* Background Image with Overlay */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center z-0"
-        style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1567496898669-ee935f5f647a?q=80&w=1742&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D)' }}
-      >
+      <div className="relative h-full">
+        <OptimizedImage
+          src="https://images.unsplash.com/photo-1567496898669-ee935f5f647a?q=80&w=1742&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+          alt="Imóveis em localização privilegiada"
+          className="absolute inset-0 object-cover"
+          priority={true}
+        />
         <div className="absolute inset-0 bg-gradient-to-r from-eliteBlue/90 to-eliteBlue/70"></div>
       </div>
       

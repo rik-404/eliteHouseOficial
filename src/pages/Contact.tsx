@@ -112,8 +112,8 @@ const Contact = () => {
                     <div>
                       <h3 className="text-xl text-white mb-2">Telefones</h3>
                       <p className="text-muted-foreground">
-                        +55 (11) 5555-1234<br />
-                        +55 (11) 91234-5678
+                        +55 19 98454-5862<br />
+                        +55 19 98835-3073
                       </p>
                     </div>
                   </div>
@@ -125,8 +125,7 @@ const Contact = () => {
                     <div>
                       <h3 className="text-xl text-white mb-2">Email</h3>
                       <p className="text-muted-foreground">
-                        contato@elitehouse.com<br />
-                        vendas@elitehouse.com
+                        elitehousepiracicaba@gmail.com
                       </p>
                     </div>
                   </div>
@@ -227,7 +226,7 @@ const Contact = () => {
                 </p>
               </div>
               <a 
-                href="https://wa.me/5511912345678" 
+                href="https://wa.me/5519984545862" 
                 target="_blank" 
                 rel="noopener noreferrer"
               >

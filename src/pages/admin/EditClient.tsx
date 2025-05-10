@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -25,17 +26,19 @@ interface Client {
   name: string;
   email: string;
   phone: string;
-  cpf: string;
-  cep: string;
-  street: string;
-  number: string;
-  neighborhood: string;
-  city: string;
-  state: string;
-  complement: string;
+  cpf?: string | null;
+  cep?: string | null;
+  street?: string | null;
+  number?: string | null;
+  neighborhood?: string | null;
+  city?: string | null;
+  state?: string | null;
+  complement?: string | null;
   broker_id: string;
   status: ClientStatus;
   notes: string;
+  properties_id?: string | null;
+  property_name?: string | null;
 }
 
 const EditClient = () => {
@@ -44,55 +47,60 @@ const EditClient = () => {
   const { id } = useParams();
 
   const [client, setClient] = useState<Client | null>(null);
+  const [properties, setProperties] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [brokers, setBrokers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [noBrokers, setNoBrokers] = useState(false);
-
-  const fetchClient = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      setClient(data);
-    } catch (err) {
-      console.error('Erro ao carregar cliente:', err);
-      setError('Erro ao carregar cliente. Por favor, tente novamente.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [showPermissionError, setShowPermissionError] = useState(false);
 
   useEffect(() => {
-    fetchClient();
+    const fetchProperties = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('properties')
+          .select('id, title')
+          .order('title');
 
-    // Configurar escuta em tempo real
-    const channel = supabase
-      .channel('client-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'clients',
-          filter: `id=eq.${id}`
-        },
-        (payload) => {
-          console.log('Change received for client:', payload);
-          fetchClient();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      channel.unsubscribe();
+        if (error) throw error;
+        setProperties(data || []);
+      } catch (error) {
+        console.error('Erro ao carregar propriedades:', error);
+      }
     };
-  }, [id]);
+
+    fetchProperties();
+  }, []);
+
+  useEffect(() => {
+    if (!id) return;
+
+    const loadClient = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('clients')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (error) throw error;
+        setClient(data);
+
+        // Verificar permissões se o status for Análise bancária, Aprovado, Condicionado ou Reprovado
+        if (data.status === 'Análise bancária' || data.status === 'Aprovado' || data.status === 'Condicionado' || data.status === 'Reprovado') {
+          if (user?.role === 'corretor') {
+            setShowPermissionError(true);
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao carregar cliente:', error);
+        setError('Erro ao carregar cliente');
+      }
+    };
+
+    loadClient();
+  }, [id, user]);
 
   useEffect(() => {
     const fetchBrokers = async () => {
@@ -158,12 +166,26 @@ const EditClient = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!client) return;
-
-    setLoading(true);
-    setError(null);
+    setIsSubmitting(true);
 
     try {
+      // Validar campos obrigatórios
+      if (!client?.name) throw new Error('Nome é obrigatório');
+      if (!client?.email) throw new Error('Email é obrigatório');
+      if (!client?.phone) throw new Error('Telefone é obrigatório');
+      if (!client?.broker_id) throw new Error('Corretor é obrigatório');
+      if (!client?.status) throw new Error('Status é obrigatório');
+
+      // Verificar permissões antes de salvar
+      if (user?.role === 'corretor' && (client.status === 'Análise bancária' || client.status === 'Aprovado' || client.status === 'Condicionado' || client.status === 'Reprovado')) {
+        setError('Você não tem permissão para editar este cliente nesse status');
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
       const { data, error } = await supabase
         .from('clients')
         .update({
@@ -223,6 +245,20 @@ const EditClient = () => {
 
   return (
     <div className="container mx-auto py-8">
+      <h1 className="text-2xl font-bold mb-6">Editar Cliente</h1>
+
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {showPermissionError && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>Você não tem permissão para editar este cliente.</AlertDescription>
+        </Alert>
+      )}
+
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -310,71 +346,136 @@ const EditClient = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="cep">CEP</Label>
+                <Label htmlFor="cep">CEP (Opcional)</Label>
                 <Input
                   id="cep"
-                  value={client.cep}
+                  value={client?.cep || ''}
                   onChange={handleCEPChange}
                   placeholder="Digite o CEP (apenas números)"
                 />
               </div>
               <div>
-                <Label htmlFor="street">Rua</Label>
+                <Label htmlFor="street">Rua (Opcional)</Label>
                 <Input
                   id="street"
-                  value={client.street}
-                  onChange={(e) => setClient({ ...client, street: e.target.value })}
+                  value={client?.street || ''}
+                  onChange={(e) => setClient(prev => prev ? { ...prev, street: e.target.value } : null)}
                 />
               </div>
               <div>
-                <Label htmlFor="number">Número</Label>
+                <Label htmlFor="number">Número (Opcional)</Label>
                 <Input
                   id="number"
-                  value={client.number}
-                  onChange={(e) => setClient({ ...client, number: e.target.value })}
+                  value={client?.number || ''}
+                  onChange={(e) => setClient(prev => prev ? { ...prev, number: e.target.value } : null)}
                 />
               </div>
               <div>
-                <Label htmlFor="neighborhood">Bairro</Label>
+                <Label htmlFor="neighborhood">Bairro (Opcional)</Label>
                 <Input
                   id="neighborhood"
-                  value={client.neighborhood}
-                  onChange={(e) => setClient({ ...client, neighborhood: e.target.value })}
+                  value={client?.neighborhood || ''}
+                  onChange={(e) => setClient(prev => prev ? { ...prev, neighborhood: e.target.value } : null)}
                 />
               </div>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="cpf">CPF (Opcional)</Label>
+                  <Input
+                    id="cpf"
+                    value={client?.cpf || ''}
+                    onChange={(e) => setClient(prev => prev ? { ...prev, cpf: e.target.value } : null)}
+                  />
+                </div>
+              </div>
               <div>
-                <Label htmlFor="city">Cidade</Label>
+                <Label htmlFor="city">Cidade (Opcional)</Label>
                 <Input
                   id="city"
-                  value={client.city}
+                  value={client?.city || ''}
                   onChange={(e) => setClient({ ...client, city: e.target.value })}
                 />
               </div>
               <div>
-                <Label htmlFor="state">Estado</Label>
+                <Label htmlFor="state">Estado (Opcional)</Label>
                 <Input
                   id="state"
-                  value={client.state}
+                  value={client?.state || ''}
                   onChange={(e) => setClient({ ...client, state: e.target.value })}
                 />
               </div>
               <div>
-                <Label htmlFor="complement">Complemento</Label>
+                <Label htmlFor="complement">Complemento (Opcional)</Label>
                 <Input
                   id="complement"
-                  value={client.complement}
+                  value={client?.complement || ''}
                   onChange={(e) => setClient({ ...client, complement: e.target.value })}
                 />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="notes">Observações</Label>
-                <Input
-                  id="notes"
-                  value={client.notes}
-                  onChange={(e) => setClient({ ...client, notes: e.target.value })}
-                />
+                <Label htmlFor="status">Status</Label>
+                <Select
+                  value={client.status}
+                  onValueChange={(value) => setClient({ ...client, status: value as ClientStatus })}
+                  disabled={user?.role === 'corretor' && (client.status === 'Análise bancária' || client.status === 'Aprovado' || client.status === 'Condicionado' || client.status === 'Reprovado')}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Novo">Novo</SelectItem>
+                    <SelectItem value="Atendimento">Atendimento</SelectItem>
+                    <SelectItem value="Análise documental">Análise documental</SelectItem>
+                    <SelectItem value="Análise bancária">Análise bancária</SelectItem>
+                    <SelectItem value="Aprovado">Aprovado</SelectItem>
+                    <SelectItem value="Condicionado">Condicionado</SelectItem>
+                    <SelectItem value="Reprovado">Reprovado</SelectItem>
+                    <SelectItem value="Venda realizada">Venda realizada</SelectItem>
+                    <SelectItem value="Distrato">Distrato</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="notes">Observações</Label>
+                  <Textarea
+                    id="notes"
+                    name="notes"
+                    value={client?.notes || ''}
+                    onChange={(e) => setClient(prev => prev ? { ...prev, notes: e.target.value } : null)}
+                    placeholder="Observações sobre o cliente..."
+                    className="min-h-[100px]"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="property">Empreendimento</Label>
+                  <Select
+                    value={client?.properties_id || ''}
+                    onValueChange={(value) => {
+                      const selectedProperty = properties.find(p => p.id === value);
+                      setClient(prev => prev ? {
+                        ...prev,
+                        properties_id: value,
+                        property_name: selectedProperty?.title || null
+                      } : null);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um empreendimento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum (adicionado manualmente)</SelectItem>
+                      {properties.map((property) => (
+                        <SelectItem key={property.id} value={property.id}>
+                          {property.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
             <div className="flex justify-end gap-4">
@@ -386,11 +487,6 @@ const EditClient = () => {
                 {loading ? 'Atualizando...' : 'Atualizar'}
               </Button>
             </div>
-            {error && (
-              <Alert variant="destructive" className="mt-4">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
           </form>
         </CardContent>
       </Card>

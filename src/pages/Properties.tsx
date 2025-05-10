@@ -3,167 +3,144 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import PropertyCard, { PropertyType } from '@/components/PropertyCard';
+import PropertyCard from '@/components/PropertyCard';
+import { PropertyType } from '@/components/PropertyCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Filter, Search } from 'lucide-react';
+import { Filter } from 'lucide-react';
+import PropertyCardSkeleton from '@/components/ui/skeleton-card';
 
-// Mock data for properties
-const mockProperties: PropertyType[] = [
-  {
-    id: 1,
-    title: 'Apartamento de Luxo com Vista para o Mar',
-    price: 1850000,
-    address: 'Av. Atlântica, 1500',
-    city: 'Rio de Janeiro',
-    state: 'RJ',
-    bedrooms: 3,
-    bathrooms: 3,
-    area: 180,
-    image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-    type: 'Apartamento',
-    featured: true
-  },
-  {
-    id: 2,
-    title: 'Casa de Campo com Piscina e Área Gourmet',
-    price: 2200000,
-    address: 'Estrada do Rio Grande, 3000',
-    city: 'Gramado',
-    state: 'RS',
-    bedrooms: 4,
-    bathrooms: 3,
-    area: 350,
-    image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=1475&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-    type: 'Casa',
-    featured: true
-  },
-  {
-    id: 3,
-    title: 'Cobertura Duplex em Alto Padrão',
-    price: 3700000,
-    address: 'Av. Paulista, 2000',
-    city: 'São Paulo',
-    state: 'SP',
-    bedrooms: 4,
-    bathrooms: 5,
-    area: 420,
-    image: 'https://images.unsplash.com/photo-1493809842364-78817add7ffb?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-    type: 'Cobertura',
-    featured: true
-  },
-  {
-    id: 4,
-    title: 'Apartamento Garden com Amplo Espaço de Lazer',
-    price: 1350000,
-    address: 'Rua Prof. Pedro Viriato, 500',
-    city: 'Curitiba',
-    state: 'PR',
-    bedrooms: 3,
-    bathrooms: 2,
-    area: 156,
-    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-    type: 'Apartamento',
-    featured: true
-  },
-  {
-    id: 5,
-    title: 'Casa em Condomínio Fechado com Segurança 24h',
-    price: 2800000,
-    address: 'Alameda das Flores, 150',
-    city: 'Campinas',
-    state: 'SP',
-    bedrooms: 4,
-    bathrooms: 4,
-    area: 380,
-    image: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?q=80&w=1471&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-    type: 'Casa',
-    featured: true
-  },
-  {
-    id: 6,
-    title: 'Terreno em Condomínio de Luxo',
-    price: 950000,
-    address: 'Rua das Palmeiras, 350',
-    city: 'Florianópolis',
-    state: 'SC',
-    bedrooms: 0,
-    bathrooms: 0,
-    area: 500,
-    image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=1469&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-    type: 'Terreno'
-  },
+import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
+
+const locations = [
+  'Todos'
 ];
 
-const cities = [
-  'Todos',
-  'São Paulo, SP',
-  'Rio de Janeiro, RJ',
-  'Belo Horizonte, MG',
-  'Brasília, DF',
-  'Salvador, BA',
-  'Fortaleza, CE',
-  'Curitiba, PR',
-  'Porto Alegre, RS',
-  'Recife, PE',
-  'Florianópolis, SC',
-  'Campinas, SP',
-  'Gramado, RS'
-];
-
-const Properties = () => {
+const Properties: React.FC = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
+  const { toast } = useToast();
   
   // State for filters
-  const [locationFilter, setLocationFilter] = useState(searchParams.get('location') || '');
+  const [locationFilter, setLocationFilter] = useState(searchParams.get('location') || 'Todos');
   const [typeFilter, setTypeFilter] = useState(searchParams.get('type') || 'all');
   const [minPriceFilter, setMinPriceFilter] = useState(parseInt(searchParams.get('minPrice') || '100000'));
   const [maxPriceFilter, setMaxPriceFilter] = useState(parseInt(searchParams.get('maxPrice') || '10000000'));
-  const [bedroomsFilter, setBedroomsFilter] = useState(searchParams.get('bedrooms') || 'any');
+
   
   // State for mobile filter visibility
   const [showFilters, setShowFilters] = useState(false);
   
-  // State for filtered properties and pagination
+  // State for properties and filtered properties
+  const [properties, setProperties] = useState<PropertyType[]>([]);
   const [filteredProperties, setFilteredProperties] = useState<PropertyType[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 6;
-  
-  // Apply filters
+  const [itemsPerPage, setItemsPerPage] = useState(6);
+  const [currentPageProperties, setCurrentPageProperties] = useState<PropertyType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [totalProperties, setTotalProperties] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Carregar locais
   useEffect(() => {
-    let filtered = [...mockProperties];
-    
-    if (locationFilter && locationFilter !== 'Todos') {
-      const [city, state] = locationFilter.split(', ');
-      filtered = filtered.filter(property => property.city === city && property.state === state);
-    }
-    
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(property => property.type === typeFilter);
-    }
-    
-    filtered = filtered.filter(property => 
-      property.price >= minPriceFilter && property.price <= maxPriceFilter
-    );
-    
-    if (bedroomsFilter !== 'any') {
-      const minBedrooms = parseInt(bedroomsFilter);
-      filtered = filtered.filter(property => property.bedrooms >= minBedrooms);
-    }
-    
+    const loadLocations = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('properties')
+          .select('location')
+          .order('location', { ascending: true });
+
+        if (error) throw error;
+        
+        if (data) {
+          const uniqueLocations = ['Todos', ...new Set(data.map(property => property.location))];
+          locations.splice(1, locations.length - 1, ...uniqueLocations.slice(1));
+          
+          // Atualizar o filtro de localização se necessário
+          if (locationFilter && !uniqueLocations.includes(locationFilter)) {
+            setLocationFilter('Todos');
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao carregar locais:', error);
+      }
+    };
+
+    loadLocations();
+  }, []);
+
+  // Apply filters
+  const applyFilters = () => {
+    const filtered = properties.filter(property => {
+      const matchesLocation = locationFilter === 'Todos' || property.location === locationFilter;
+      const matchesType = typeFilter === 'all' || property.type === typeFilter;
+      const matchesPrice = property.price >= minPriceFilter && property.price <= maxPriceFilter;
+      return matchesLocation && matchesType && matchesPrice;
+    });
+
     setFilteredProperties(filtered);
+    setTotalProperties(filtered.length);
+    setTotalPages(Math.ceil(filtered.length / itemsPerPage));
+
+    // Atualizar os dados da página atual
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, filtered.length);
+    setCurrentPageProperties(filtered.slice(startIndex, endIndex));
+
+    // Resetar para a primeira página quando os filtros mudam
     setCurrentPage(1);
-  }, [locationFilter, typeFilter, minPriceFilter, maxPriceFilter, bedroomsFilter]);
-  
-  // Get current page properties
-  const indexOfLastProperty = currentPage * itemsPerPage;
-  const indexOfFirstProperty = indexOfLastProperty - itemsPerPage;
-  const currentProperties = filteredProperties.slice(indexOfFirstProperty, indexOfLastProperty);
-  
+  };
+
+  useEffect(() => {
+    applyFilters();
+  }, [locationFilter, typeFilter, minPriceFilter, maxPriceFilter, properties]);
+
+  // Load properties and property types from Supabase
+  useEffect(() => {
+    const loadProperties = async () => {
+      try {
+        setIsLoading(true);
+        console.log('Iniciando carregamento de propriedades...');
+        
+        const { data: propertiesData, error: propertiesError } = await supabase
+          .from('properties')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (propertiesError) throw propertiesError;
+
+        const properties = propertiesData || [];
+        setProperties(properties);
+        setFilteredProperties(properties);
+        
+        // Atualizar os dados da página atual
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = Math.min(startIndex + itemsPerPage, properties.length);
+        setCurrentPageProperties(properties.slice(startIndex, endIndex));
+        
+        // Atualizar o total de páginas
+        setTotalProperties(properties.length);
+        setTotalPages(Math.ceil(properties.length / itemsPerPage));
+
+
+      } catch (error) {
+        console.error('Erro ao carregar propriedades:', error);
+        toast({
+          title: "Erro",
+          description: "Falha ao carregar as propriedades. Por favor, tente novamente.",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadProperties();
+  }, [currentPage, itemsPerPage]);
+
   // Change page
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
   
@@ -203,7 +180,7 @@ const Properties = () => {
               {/* Filters - Desktop */}
               <div className="hidden md:block w-64 shrink-0">
                 <div className="bg-card p-6 rounded-lg sticky top-24">
-                  <h3 className="text-lg font-medium text-white mb-6">Filtros</h3>
+                  <h3 className="text-lg font-medium text-eliteOrange mb-6">Filtros</h3>
                   
                   <form onSubmit={handleApplyFilters}>
                     <div className="space-y-6">
@@ -217,9 +194,9 @@ const Properties = () => {
                             <SelectValue placeholder="Escolha a localização" />
                           </SelectTrigger>
                           <SelectContent>
-                            {cities.map((city) => (
-                              <SelectItem key={city} value={city}>
-                                {city}
+                            {locations.map((location) => (
+                              <SelectItem key={location} value={location}>
+                                {location}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -229,7 +206,7 @@ const Properties = () => {
                       <div className="space-y-2">
                         <Label htmlFor="type-desktop">Tipo de Imóvel</Label>
                         <Select 
-                          value={typeFilter} 
+                          value={typeFilter}
                           onValueChange={setTypeFilter}
                         >
                           <SelectTrigger id="type-desktop">
@@ -264,26 +241,6 @@ const Properties = () => {
                           </div>
                         </div>
                       </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="bedrooms-desktop">Quartos</Label>
-                        <Select 
-                          value={bedroomsFilter}
-                          onValueChange={setBedroomsFilter}
-                        >
-                          <SelectTrigger id="bedrooms-desktop">
-                            <SelectValue placeholder="Número de quartos" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="any">Qualquer</SelectItem>
-                            <SelectItem value="1">1+</SelectItem>
-                            <SelectItem value="2">2+</SelectItem>
-                            <SelectItem value="3">3+</SelectItem>
-                            <SelectItem value="4">4+</SelectItem>
-                            <SelectItem value="5">5+</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
                     </div>
                   </form>
                 </div>
@@ -311,7 +268,7 @@ const Properties = () => {
                 {showFilters && (
                   <div className="md:hidden mb-6 bg-card p-6 rounded-lg">
                     <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-medium text-white">Filtros</h3>
+                      <h3 className="text-lg font-medium text-orange-600">Filtros</h3>
                       <button 
                         className="text-muted-foreground"
                         onClick={() => setShowFilters(false)}
@@ -332,9 +289,9 @@ const Properties = () => {
                               <SelectValue placeholder="Escolha a localização" />
                             </SelectTrigger>
                             <SelectContent>
-                              {cities.map((city) => (
-                                <SelectItem key={city} value={city}>
-                                  {city}
+                              {locations.map((location) => (
+                                <SelectItem key={location} value={location}>
+                                  {location}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -380,26 +337,6 @@ const Properties = () => {
                           </div>
                         </div>
                         
-                        <div className="space-y-2">
-                          <Label htmlFor="bedrooms-mobile">Quartos</Label>
-                          <Select 
-                            value={bedroomsFilter}
-                            onValueChange={setBedroomsFilter}
-                          >
-                            <SelectTrigger id="bedrooms-mobile">
-                              <SelectValue placeholder="Número de quartos" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="any">Qualquer</SelectItem>
-                              <SelectItem value="1">1+</SelectItem>
-                              <SelectItem value="2">2+</SelectItem>
-                              <SelectItem value="3">3+</SelectItem>
-                              <SelectItem value="4">4+</SelectItem>
-                              <SelectItem value="5">5+</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
                         <Button 
                           type="submit" 
                           className="w-full bg-eliteOrange hover:bg-eliteOrange-light text-white"
@@ -419,40 +356,48 @@ const Properties = () => {
                 </div>
                 
                 {/* Properties Grid */}
-                {currentProperties.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {currentProperties.map((property) => (
-                      <PropertyCard key={property.id} property={property} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-16">
-                    <h3 className="text-xl text-white mb-2">Nenhum imóvel encontrado</h3>
-                    <p className="text-muted-foreground">Tente ajustar seus filtros de busca</p>
-                  </div>
-                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {isLoading ? (
+                    <>
+                      {[...Array(6)].map((_, index) => (
+                        <PropertyCardSkeleton key={index} />
+                      ))}
+                    </>
+                  ) : currentPageProperties.length === 0 ? (
+                    <div className="col-span-3 text-center py-12">
+                      <p className="text-muted-foreground">Nenhuma propriedade encontrada</p>
+                    </div>
+                  ) : (
+                    currentPageProperties.map((property) => (
+                      <PropertyCard
+                        key={property.id}
+                        property={property}
+                        featured={property.featured}
+                      />
+                    ))
+                  )}
+                </div>
                 
                 {/* Pagination */}
-                {filteredProperties.length > itemsPerPage && (
-                  <div className="flex justify-center mt-10">
-                    <div className="join">
+                <div className="flex justify-center mt-8">
+                  {filteredProperties.length > 0 && (
+                    <div className="flex items-center gap-2">
                       {Array.from({ length: Math.ceil(filteredProperties.length / itemsPerPage) }).map((_, index) => (
-                        <Button
+                        <button
                           key={index}
                           onClick={() => paginate(index + 1)}
-                          variant={currentPage === index + 1 ? 'default' : 'outline'}
-                          className={`mx-1 ${
-                            currentPage === index + 1 
-                              ? 'bg-eliteOrange hover:bg-eliteOrange-light text-white' 
-                              : 'border-muted text-white hover:bg-eliteBlue-light'
+                          className={`px-3 py-1 rounded ${
+                            currentPage === index + 1
+                              ? 'bg-eliteOrange text-white'
+                              : 'bg-muted hover:bg-muted/80'
                           }`}
                         >
                           {index + 1}
-                        </Button>
+                        </button>
                       ))}
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           </div>

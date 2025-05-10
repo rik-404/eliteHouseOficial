@@ -1,0 +1,16 @@
+{
+  "name": "Elite House",
+  "short_name": "Elite House",
+  "description": "Plataforma de imóveis Elite House",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    }
+  ]
+}

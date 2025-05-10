@@ -38,7 +38,7 @@ interface Client {
   notes: string;
 }
 
-const NewClient = () => {
+export const NewClient = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 

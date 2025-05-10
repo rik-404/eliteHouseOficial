@@ -148,20 +148,20 @@ const About = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="p-6 bg-card rounded-lg border border-muted hover:border-eliteOrange transition-all duration-300">
-                <h3 className="text-xl font-semibold text-white mb-4">Excelência</h3>
+              <div className="p-6 bg-card rounded-lg border border-muted hover:border-eliteOrange transition-all duration-300 relative">
+                <h3 className="text-xl font-semibold text-eliteOrange mb-4 absolute inset-x-0 top-0 bg-card px-6 py-3">Excelência</h3>
                 <p className="text-muted-foreground">
                   Buscamos constantemente aprimorar nossos processos e serviços para oferecer o mais alto padrão de qualidade em cada interação com nossos clientes.
                 </p>
               </div>
-              <div className="p-6 bg-card rounded-lg border border-muted hover:border-eliteOrange transition-all duration-300">
-                <h3 className="text-xl font-semibold text-white mb-4">Transparência</h3>
+              <div className="p-6 bg-card rounded-lg border border-muted hover:border-eliteOrange transition-all duration-300 relative">
+                <h3 className="text-xl font-semibold text-eliteOrange mb-4 absolute inset-x-0 top-0 bg-card px-6 py-3">Transparência</h3>
                 <p className="text-muted-foreground">
                   Acreditamos que relacionamentos duradouros são construídos com base na honestidade e clareza em todas as etapas da negociação.
                 </p>
               </div>
-              <div className="p-6 bg-card rounded-lg border border-muted hover:border-eliteOrange transition-all duration-300">
-                <h3 className="text-xl font-semibold text-white mb-4">Compromisso</h3>
+              <div className="p-6 bg-card rounded-lg border border-muted hover:border-eliteOrange transition-all duration-300 relative">
+                <h3 className="text-xl font-semibold text-eliteOrange mb-4 absolute inset-x-0 top-0 bg-card px-6 py-3">Compromisso</h3>
                 <p className="text-muted-foreground">
                   Estamos dedicados a entender as necessidades específicas de cada cliente e trabalhar incansavelmente para superar suas expectativas.
                 </p>
