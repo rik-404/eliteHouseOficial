@@ -11,7 +11,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Filter } from 'lucide-react';
-import PropertyCardSkeleton from '@/components/ui/skeleton-card';
 
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -358,11 +357,10 @@ const Properties: React.FC = () => {
                 {/* Properties Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {isLoading ? (
-                    <>
-                      {[...Array(6)].map((_, index) => (
-                        <PropertyCardSkeleton key={index} />
-                      ))}
-                    </>
+                    <div className="col-span-3 text-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-eliteOrange mx-auto"></div>
+                      <p className="mt-4 text-muted-foreground">Carregando propriedades...</p>
+                    </div>
                   ) : currentPageProperties.length === 0 ? (
                     <div className="col-span-3 text-center py-12">
                       <p className="text-muted-foreground">Nenhuma propriedade encontrada</p>

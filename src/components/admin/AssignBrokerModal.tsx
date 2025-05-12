@@ -34,9 +34,9 @@ export default function AssignBrokerModal({
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Selecione um corretor" />
             </SelectTrigger>
-            <SelectContent key="brokers-list">
+            <SelectContent>
               {brokers.map((broker) => (
-                <SelectItem key={broker.id} value={broker.broker_id}>
+                <SelectItem key={`assign-${broker.id}`} value={broker.broker_id}>
                   {broker.name}
                 </SelectItem>
               ))}

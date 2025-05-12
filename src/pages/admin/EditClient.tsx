@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
+import { Client } from '@/types/client';
 import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { CalendarIcon, CalendarPlus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ScheduleAppointmentDialog } from '@/components/scheduling/ScheduleAppointmentDialog';
 
 interface ViaCEPResponse {
   cep: string;
@@ -21,25 +25,7 @@ interface ViaCEPResponse {
 
 type ClientStatus = 'Novo' | 'Atendimento' | 'Análise documental' | 'Análise bancária' | 'Aprovado' | 'Condicionado' | 'Reprovado' | 'Venda realizada' | 'Distrato';
 
-interface Client {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  cpf?: string | null;
-  cep?: string | null;
-  street?: string | null;
-  number?: string | null;
-  neighborhood?: string | null;
-  city?: string | null;
-  state?: string | null;
-  complement?: string | null;
-  broker_id: string;
-  status: ClientStatus;
-  notes: string;
-  properties_id?: string | null;
-  property_name?: string | null;
-}
+
 
 const EditClient = () => {
   const { user } = useAuth();
@@ -202,7 +188,9 @@ const EditClient = () => {
           complement: client.complement,
           broker_id: client.broker_id,
           status: client.status,
-          notes: client.notes
+          notes: client.notes,
+          origin: client.origin || null,
+          scheduling: client.scheduling || null
         })
         .eq('id', client.id)
         .select()
@@ -245,7 +233,6 @@ const EditClient = () => {
 
   return (
     <div className="container mx-auto py-8">
-      <h1 className="text-2xl font-bold mb-6">Editar Cliente</h1>
 
       {error && (
         <Alert variant="destructive" className="mb-4">
@@ -266,7 +253,7 @@ const EditClient = () => {
             <Button
               variant="outline"
               onClick={() => navigate('/admin/clients')}
-              className="text-gray-700 hover:text-gray-900"
+              className="bg-orange-500 hover:bg-orange-600 text-white"
             >
               Voltar
             </Button>
@@ -275,23 +262,26 @@ const EditClient = () => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name">Nome <span className="text-red-500">*</span></Label>
-                <Input
-                  id="name"
-                  value={client.name}
-                  onChange={(e) => setClient({ ...client, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="cpf">CPF <span className="text-red-500">*</span></Label>
-                <Input
-                  id="cpf"
-                  value={client.cpf}
-                  onChange={(e) => setClient({ ...client, cpf: e.target.value })}
-                  required
-                />
+              <div className="md:col-span-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="name">Nome <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="name"
+                      value={client.name}
+                      onChange={(e) => setClient({ ...client, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="cpf">CPF (opcional)</Label>
+                    <Input
+                      id="cpf"
+                      value={client.cpf || ''}
+                      onChange={(e) => setClient({ ...client, cpf: e.target.value })}
+                    />
+                  </div>
+                </div>
               </div>
               <div>
                 <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
@@ -378,38 +368,44 @@ const EditClient = () => {
                   onChange={(e) => setClient(prev => prev ? { ...prev, neighborhood: e.target.value } : null)}
                 />
               </div>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="cpf">CPF (Opcional)</Label>
-                  <Input
-                    id="cpf"
-                    value={client?.cpf || ''}
-                    onChange={(e) => setClient(prev => prev ? { ...prev, cpf: e.target.value } : null)}
-                  />
+              <div>
+                <Label htmlFor="origin">Origem (Opcional)</Label>
+                <Input
+                  id="origin"
+                  value={client?.origin || ''}
+                  onChange={(e) => setClient(prev => prev ? { ...prev, origin: e.target.value } : null)}
+                  placeholder="Ex: Site, Indicação, etc."
+                />
+              </div>
+              <div>
+                <div className="space-y-2">
+                  <Label htmlFor="scheduling">Status do Agendamento</Label>
+                  <Select
+                    value={client?.scheduling || ''}
+                    onValueChange={(value) => {
+                      setClient(prev => prev ? { 
+                        ...prev, 
+                        scheduling: value as 'Aguardando' | 'Não realizada' | 'Realizada' | null 
+                      } : null);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Aguardando">Aguardando</SelectItem>
+                      <SelectItem value="Não realizada">Não realizada</SelectItem>
+                      <SelectItem value="Realizada">Realizada</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
-              <div>
-                <Label htmlFor="city">Cidade (Opcional)</Label>
-                <Input
-                  id="city"
-                  value={client?.city || ''}
-                  onChange={(e) => setClient({ ...client, city: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="state">Estado (Opcional)</Label>
-                <Input
-                  id="state"
-                  value={client?.state || ''}
-                  onChange={(e) => setClient({ ...client, state: e.target.value })}
-                />
               </div>
               <div>
                 <Label htmlFor="complement">Complemento (Opcional)</Label>
                 <Input
                   id="complement"
                   value={client?.complement || ''}
-                  onChange={(e) => setClient({ ...client, complement: e.target.value })}
+                  onChange={(e) => setClient(prev => prev ? { ...prev, complement: e.target.value } : null)}
                 />
               </div>
             </div>
@@ -478,14 +474,45 @@ const EditClient = () => {
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-4">
-              <Button
-                type="submit"
-                disabled={loading}
-                className="bg-green-500 hover:bg-green-600 text-white"
-              >
-                {loading ? 'Atualizando...' : 'Atualizar'}
-              </Button>
+            <div className="flex justify-between pt-4">
+              <div>
+                {client && (
+                  <ScheduleAppointmentDialog 
+                    clientId={client.id} 
+                    clientName={client.name}
+                    onSuccess={() => {
+                      // Atualiza o status do cliente para 'Aguardando' após o agendamento
+                      setClient(prev => prev ? { ...prev, scheduling: 'Aguardando' } : null);
+                    }}
+                  >
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                    >
+                      <CalendarPlus className="h-4 w-4" />
+                      Agendar Visita
+                    </Button>
+                  </ScheduleAppointmentDialog>
+                )}
+              </div>
+              <div className="flex gap-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate('/admin/clients')}
+                  disabled={loading}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-green-500 hover:bg-green-600 text-white"
+                >
+                  {loading ? 'Atualizando...' : 'Atualizar'}
+                </Button>
+              </div>
             </div>
           </form>
         </CardContent>

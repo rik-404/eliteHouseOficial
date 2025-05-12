@@ -42,7 +42,9 @@ const Contact = () => {
             email: formData.email,
             phone: formData.phone,
             status: 'pending',
-            notes: formData.message
+            origin: 'Site',
+            notes: formData.message,
+            broker_id: null // Será atribuído posteriormente por um administrador
           }
         ])
         .select();

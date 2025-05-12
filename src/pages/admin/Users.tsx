@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search } from 'lucide-react';
+import { Search, Pencil, Trash } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
 import { Switch } from '@/components/ui/switch';
@@ -127,7 +127,7 @@ const Users = () => {
           onClick={() => navigate('/admin/users/create')}
           className="bg-green-600 hover:bg-green-700 text-white"
         >
-          Novo Usuário
+          + Novo Usuário
         </Button>
         <PasswordConfirmationModal
           open={showPasswordModal}
@@ -216,9 +216,9 @@ const Users = () => {
                     <Button
                       variant="outline"
                       onClick={() => navigate(`/admin/users/${user.id}/edit`)}
-                      className="bg-yellow-500 hover:bg-yellow-600 text-gray-900"
+                      className="bg-yellow-500 hover:bg-yellow-600 text-white"
                     >
-                      Editar
+                      <Pencil className="h-4 w-4 mr-2" /> Editar
                     </Button>
                     <Button
                       variant="outline"
@@ -246,7 +246,7 @@ const Users = () => {
                         }
                       `}
                     >
-                      Excluir
+                      <Trash className="h-4 w-4 mr-2" /> Excluir
                     </Button>
                   </div>
                 </TableCell>

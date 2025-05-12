@@ -33,9 +33,11 @@ interface Client {
   city: string;
   state: string;
   complement: string;
+  origin: string;
   broker_id: string;
   status: ClientStatus;
   notes: string;
+  scheduling?: string;
 }
 
 export const NewClient = () => {
@@ -56,9 +58,11 @@ export const NewClient = () => {
     city: '',
     state: '',
     complement: '',
+    origin: '',
     broker_id: user?.role === 'corretor' ? user.broker_id : '',
     status: 'Novo' as ClientStatus,
-    notes: ''
+    notes: '',
+    scheduling: 'Aguardando' // Valor padrão para novos clientes
   };
 
   const [client, setClient] = useState<Client>(initialClient);
@@ -170,7 +174,9 @@ export const NewClient = () => {
         .from('clients')
         .insert([{
           ...clientData,
-          broker_id: client.broker_id
+          broker_id: client.broker_id,
+          origin: client.origin || null,
+          scheduling: 'Aguardando' // Garante que o agendamento seja definido como 'Aguardando'
         }])
         .select()
         .single();
@@ -233,12 +239,11 @@ export const NewClient = () => {
             />
           </div>
           <div>
-            <Label htmlFor="cpf">CPF <span className="text-red-500">*</span></Label>
+            <Label htmlFor="cpf">CPF</Label>
             <Input
               id="cpf"
               value={client.cpf}
               onChange={(e) => setClient({ ...client, cpf: e.target.value })}
-              required
             />
           </div>
           <div>
@@ -355,12 +360,21 @@ export const NewClient = () => {
               onChange={(e) => setClient({ ...client, complement: e.target.value })}
             />
           </div>
+          <div>
+            <Label htmlFor="origin">Origem</Label>
+            <Input
+              id="origin"
+              value={client.origin}
+              onChange={(e) => setClient({ ...client, origin: e.target.value })}
+              placeholder="Ex: Site, Indicação, etc."
+            />
+          </div>
         </div>
         <div className="mt-4">
           <Button
             type="submit"
             disabled={loading}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+            className="w-full bg-green-500 hover:bg-green-600 text-white"
           >
             {loading ? 'Criando...' : 'Criar Cliente'}
           </Button>

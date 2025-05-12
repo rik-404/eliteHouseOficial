@@ -3,14 +3,16 @@ export interface Client {
   name: string;
   email: string;
   phone: string;
-  cpf: string;
-  cep: string;
-  street: string;
-  number: string;
-  neighborhood: string;
-  city: string;
-  state: string;
-  complement: string;
+  cpf?: string | null;
+  cep?: string | null;
+  street?: string | null;
+  number?: string | null;
+  neighborhood?: string | null;
+  city?: string | null;
+  state?: string | null;
+  complement?: string | null;
+  properties_id?: string | null;
+  property_name?: string | null;
   broker_id: string;
   status: 
     | 'Novo'
@@ -24,6 +26,8 @@ export interface Client {
     | 'Distrato'
     | 'pending';
   notes: string;
+  origin?: string;
+  scheduling?: 'Aguardando' | 'Não realizada' | 'Realizada' | null;
   created_at: string;
   updated_at: string;
 }
