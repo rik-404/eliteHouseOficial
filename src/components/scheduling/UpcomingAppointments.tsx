@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { format, parseISO, isToday, isTomorrow, isAfter, parse } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 import { ptBR } from 'date-fns/locale';
@@ -55,7 +55,7 @@ interface User {
   broker_id?: string;
 }
 
-export const UpcomingAppointments = () => {
+const UpcomingAppointments: React.FC = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
@@ -134,12 +134,20 @@ export const UpcomingAppointments = () => {
         const currentTime = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
 
         // Busca agendamentos atrasados
-        const { data: overdueData, error: overdueError } = await supabase
+        let query = supabase
           .from('scheduling')
           .select('*')
           .eq('status', 'Agendado')
           .lte('data', todayStr)
-          .or(`and(data.eq.${todayStr},hora.lt.${currentTime}),data.lt.${todayStr}`)
+          .or(`and(data.eq.${todayStr},hora.lt.${currentTime}),data.lt.${todayStr}`);
+
+        // Se o usuário for um corretor, filtra apenas os agendamentos dele
+        if (user?.role === 'corretor' && user.broker_id) {
+          console.log('Filtrando agendamentos atrasados apenas para o corretor:', user.broker_id);
+          query = query.eq('broker_id', user.broker_id);
+        }
+
+        const { data: overdueData, error: overdueError } = await query
           .order('data', { ascending: true })
           .order('hora', { ascending: true });
 
@@ -199,12 +207,20 @@ export const UpcomingAppointments = () => {
 
         setOverdueAppointments(formattedOverdueAppointments as Appointment[]);
 
-        const { data: schedulingData, error: schedulingError } = await supabase
+        let queryUpcoming = supabase
           .from('scheduling')
           .select('*')
           .eq('status', 'Agendado')
           .or(`and(data.eq.${todayStr},hora.gte.${currentTime}),data.gt.${todayStr}`)
-          .lte('data', nextWeek.toISOString().split('T')[0])
+          .lte('data', nextWeek.toISOString().split('T')[0]);
+
+        // Se o usuário for um corretor, filtra apenas os agendamentos dele
+        if (user?.role === 'corretor' && user.broker_id) {
+          console.log('Filtrando agendamentos futuros apenas para o corretor:', user.broker_id);
+          queryUpcoming = queryUpcoming.eq('broker_id', user.broker_id);
+        }
+
+        const { data: schedulingData, error: schedulingError } = await queryUpcoming
           .order('data', { ascending: true })
           .order('hora', { ascending: true });
 
@@ -438,95 +454,117 @@ export const UpcomingAppointments = () => {
     }
   };
 
-  const renderAppointmentCard = (appointment: Appointment, isOverdue = false) => (
-    <div
-      key={appointment.id}
-      className={`border rounded-lg p-4 ${isOverdue ? 'bg-red-50 border-red-200' : 'bg-white'}`}
-    >
-      {isOverdue && (
-        <div className="mb-2">
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            Atrasado
-          </span>
-        </div>
-      )}
-      <div className="flex justify-between items-start">
-        <div>
-          <h3 className="font-medium">{appointment.titulo}</h3>
-          <p className="text-sm text-muted-foreground">
-            {format(parseISO(appointment.data), "EEEE, d 'de' MMMM", { locale: ptBR })}
-            {' • '}
-            {appointment.hora}
-          </p>
-          <div className="mt-2 space-y-1">
-            <div className="flex items-center text-sm">
-              <span className="font-medium w-16">Cliente:</span>
-              <span className="ml-1">{appointment.client?.name || 'N/A'}</span>
-            </div>
-            <div className="flex items-center text-sm">
-              <span className="font-medium w-16">Corretor:</span>
-              <span className="ml-1">
-                {appointment.broker?.name || appointment.broker?.username || 'N/A'}
-              </span>
-            </div>
-            {isOverdue && isAdminOrDev && (
-              <div className="mt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setRescheduleAppointment(appointment);
-                    setNewAppointmentDate(appointment.data);
-                    setNewAppointmentTime(appointment.hora);
-                  }}
-                >
-                  Remarcar
-                </Button>
+  // Filtra os agendamentos para mostrar apenas os do corretor logado
+  const filteredAppointments = React.useMemo(() => {
+    if (user?.role === 'corretor' && user.broker_id) {
+      return appointments.filter(appt => appt.broker_id === user.broker_id);
+    }
+    return appointments;
+  }, [user, appointments]);
+
+  // Filtra os agendamentos atrasados para mostrar apenas os do corretor logado
+  const filteredOverdueAppointments = React.useMemo(() => {
+    if (user?.role === 'corretor' && user.broker_id) {
+      return overdueAppointments.filter(appt => appt.broker_id === user.broker_id);
+    }
+    return overdueAppointments;
+  }, [user, overdueAppointments]);
+
+  const renderAppointmentCard = (appointment: Appointment, isOverdue = false) => {
+    return (
+      <div
+        key={appointment.id}
+        className={`border rounded-lg p-4 ${isOverdue ? 'bg-red-50 border-red-200' : 'bg-white'}`}
+      >
+        {isOverdue && (
+          <div className="mb-2">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+              Atrasado
+            </span>
+          </div>
+        )}
+        <div className="flex justify-between items-start">
+          <div>
+            <h3 className="font-medium">{appointment.titulo}</h3>
+            <p className="text-sm text-muted-foreground">
+              {format(parseISO(appointment.data), "EEEE, d 'de' MMMM", { locale: ptBR })}
+              {' • '}
+              {appointment.hora}
+            </p>
+            <div className="mt-2 space-y-1">
+              <div className="flex items-center text-sm">
+                <span className="font-medium w-16">Cliente:</span>
+                <span className="ml-1">{appointment.client?.name || 'N/A'}</span>
               </div>
-            )}
+              <div className="flex items-center text-sm">
+                <span className="font-medium w-16">Corretor:</span>
+                <span className="ml-1">
+                  {appointment.broker?.name || appointment.broker?.username || 'N/A'}
+                </span>
+              </div>
+              {isOverdue && (isAdminOrDev || user?.role === 'corretor') && (
+                <div className="mt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRescheduleAppointment(appointment);
+                      setNewAppointmentDate(appointment.data);
+                      setNewAppointmentTime(appointment.hora);
+                    }}
+                  >
+                    Remarcar
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge 
+              variant={
+                appointment.status === 'Agendado' ? 'default' : 
+                appointment.status === 'Realizado' ? 'outline' : 'destructive'
+              }
+              className={appointment.status === 'Realizado' ? 'bg-green-100 text-green-800 border-green-200' : ''}
+            >
+              {appointment.status === 'Agendado' ? 'Agendado' : 
+               appointment.status === 'Realizado' ? 'Realizado' : 'Não Realizado'}
+            </Badge>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge 
-            variant={
-              appointment.status === 'Agendado' ? 'default' : 
-              appointment.status === 'Realizado' ? 'outline' : 'destructive'
-            }
-            className={appointment.status === 'Realizado' ? 'bg-green-100 text-green-800 border-green-200' : ''}
+        {appointment.descricao && (
+          <div className="mt-2 pt-2 border-t">
+            <p className="text-sm text-muted-foreground">
+              {appointment.descricao}
+            </p>
+          </div>
+        )}
+        <div className="flex justify-end items-center mt-3">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => {
+              setSelectedAppointment(appointment);
+              setIsStatusDialogOpen(true);
+            }}
+            disabled={updatingStatus[appointment.id]}
           >
-            {appointment.status === 'Agendado' ? 'Agendado' : 
-             appointment.status === 'Realizado' ? 'Realizado' : 'Não Realizado'}
-          </Badge>
+            {updatingStatus[appointment.id] ? (
+              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3 w-3 mr-1" />
+            )}
+            Atualizar status
+          </Button>
         </div>
       </div>
-      {appointment.descricao && (
-        <div className="mt-2 pt-2 border-t">
-          <p className="text-sm text-muted-foreground">
-            {appointment.descricao}
-          </p>
-        </div>
-      )}
-      <div className="flex justify-end items-center mt-3">
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 text-xs"
-          onClick={() => {
-            setSelectedAppointment(appointment);
-            setIsStatusDialogOpen(true);
-          }}
-          disabled={updatingStatus[appointment.id]}
-        >
-          {updatingStatus[appointment.id] ? (
-            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-          ) : (
-            <RefreshCw className="h-3 w-3 mr-1" />
-          )}
-          Atualizar status
-        </Button>
-      </div>
-    {/* Diálogo de Remarcação */}
+    );
+  };
+
+  // Diálogo de Remarcação
+  const renderRescheduleDialog = () => (
     <AlertDialog open={!!rescheduleAppointment} onOpenChange={(open) => !open && setRescheduleAppointment(null)}>
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -557,38 +595,71 @@ export const UpcomingAppointments = () => {
           </div>
         </div>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <AlertDialogAction 
-            onClick={handleReschedule}
-            disabled={!newAppointmentDate || !newAppointmentTime}
-          >
-            Confirmar Remarcação
-          </AlertDialogAction>
+          <Button variant="outline" onClick={() => setRescheduleAppointment(null)}>
+            Cancelar
+          </Button>
+          <Button onClick={handleReschedule} disabled={!newAppointmentDate || !newAppointmentTime}>
+            Confirmar
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  </div>
-);
+  );
 
-return (
-  <div className="space-y-6">
-    {overdueAppointments.length > 0 && (
+  return (
+    <div className="space-y-6">
+      {/* Seção de Agendamentos Atrasados */}
+      {filteredOverdueAppointments.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-medium text-red-700">
+                {user?.role === 'corretor' ? 'Meus Agendamentos Atrasados' : 'Agendamentos Atrasados'}
+                <Badge variant="destructive" className="ml-2">
+                  {filteredOverdueAppointments.length}
+                </Badge>
+              </CardTitle>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 w-8 p-0 relative"
+                onClick={() => setShowOverdue(!showOverdue)}
+              >
+                {showOverdue ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m18 15-6-6-6 6"/>
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m6 9 6 6 6-6"/>
+                  </svg>
+                )}
+              </Button>
+            </div>
+          </CardHeader>
+          {showOverdue && (
+            <CardContent>
+              <div className="space-y-3">
+                {filteredOverdueAppointments.map(appointment => renderAppointmentCard(appointment, true))}
+              </div>
+            </CardContent>
+          )}
+        </Card>
+      )}
+
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-medium text-red-700">
-              Agendamentos Atrasados
-              <Badge variant="destructive" className="ml-2">
-                {overdueAppointments.length}
-              </Badge>
+            <CardTitle className="text-lg font-medium">
+              {user?.role === 'corretor' ? 'Meus Próximos Agendamentos' : 'Próximos Agendamentos'}
             </CardTitle>
             <Button 
               variant="ghost" 
-              size="sm" 
+              size="sm"
               className="h-8 w-8 p-0 relative"
-              onClick={() => setShowOverdue(!showOverdue)}
+              onClick={() => setShowUpcoming(!showUpcoming)}
             >
-              {showOverdue ? (
+              {showUpcoming ? (
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="m18 15-6-6-6 6"/>
                 </svg>
@@ -600,58 +671,22 @@ return (
             </Button>
           </div>
         </CardHeader>
-        {showOverdue && (
-          <CardContent>
-            <div className="space-y-3">
-              {overdueAppointments.map(appointment => renderAppointmentCard(appointment, true))}
-            </div>
-          </CardContent>
-        )}
-      </Card>
-    )}
-
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-medium">
-            Próximos Agendamentos
-          </CardTitle>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-8 w-8 p-0 relative"
-            onClick={() => setShowUpcoming(!showUpcoming)}
-          >
-            {showUpcoming ? (
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m18 15-6-6-6 6"/>
-              </svg>
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m6 9 6 6 6-6"/>
-              </svg>
-            )}
-          </Button>
-        </div>
-      </CardHeader>
-      {showUpcoming && (
         <CardContent>
           {loading ? (
             <div className="flex justify-center p-8">
               <Loader2 className="h-8 w-8 animate-spin" />
             </div>
-          ) : appointments.length === 0 ? (
+          ) : filteredAppointments.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               Nenhum agendamento encontrado para os próximos dias.
             </div>
           ) : (
             <div className="space-y-3">
-              {appointments.map(appointment => renderAppointmentCard(appointment, false))}
+              {filteredAppointments.map(appointment => renderAppointmentCard(appointment, false))}
             </div>
           )}
         </CardContent>
-      )}
-    </Card>
+      </Card>
 
       {/* Diálogo de confirmação de status */}
       <AlertDialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
@@ -719,6 +754,14 @@ return (
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Diálogo de remarcação */}
+      {renderRescheduleDialog()}
     </div>
   );
 };
+
+// Exportação nomeada para uso com import { UpcomingAppointments }
+export { UpcomingAppointments };
+
+export default UpcomingAppointments;

@@ -67,6 +67,24 @@ interface User {
 const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
+  const [brokers, setBrokers] = useState<any[]>([]);
+  const [selectedBroker, setSelectedBroker] = useState<string>('all');
+
+  // Carrega a lista de corretores
+  const fetchBrokers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, name, broker_id')
+        .eq('role', 'corretor')
+        .order('name');
+
+      if (error) throw error;
+      setBrokers(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar corretores:', error);
+    }
+  };
 
   // Carrega o usuário do localStorage quando o componente é montado
   useEffect(() => {
@@ -92,6 +110,7 @@ const Dashboard = () => {
     };
 
     loadUserFromLocalStorage();
+    fetchBrokers();
   }, []);
   
   const handleSalesPieClick = (data: any, index: number) => {
@@ -262,9 +281,13 @@ const Dashboard = () => {
         .select('id, scheduling, broker_id')
         .not('scheduling', 'is', null);
       
-      // Se for um corretor, filtra apenas os clientes dele
-      if (user?.role === 'corretor' && user?.broker_id) {
-        console.log('Filtrando agendamentos para o corretor:', user.broker_id);
+      // Aplica o filtro de corretor se selecionado
+      if (selectedBroker !== 'all') {
+        console.log('Filtrando agendamentos para o corretor:', selectedBroker);
+        query = query.eq('broker_id', selectedBroker);
+      } else if (user?.role === 'corretor' && user?.broker_id) {
+        // Se for um corretor e não houver filtro, mostra apenas os clientes dele
+        console.log('Filtrando agendamentos para o corretor logado:', user.broker_id);
         query = query.eq('broker_id', user.broker_id);
       }
       
@@ -394,6 +417,67 @@ const Dashboard = () => {
     }
   };
 
+  const fetchSalesData = async () => {
+    try {
+      setLoadingSales(true);
+      
+      // Cria a query base para buscar clientes com status de venda
+      let query = supabase
+        .from('clients')
+        .select('id, status, broker_id')
+        .not('status', 'is', null);
+      
+      // Aplica o filtro de corretor se selecionado
+      if (selectedBroker !== 'all') {
+        console.log('Filtrando vendas para o corretor:', selectedBroker);
+        query = query.eq('broker_id', selectedBroker);
+      } else if (user?.role === 'corretor' && user?.broker_id) {
+        // Se for um corretor e não houver filtro, mostra apenas os clientes dele
+        console.log('Filtrando vendas para o corretor logado:', user.broker_id);
+        query = query.eq('broker_id', user.broker_id);
+      }
+      
+      const { data: clientsData, error } = await query;
+      
+      if (error) {
+        console.error('Erro ao buscar dados de vendas:', error);
+        setSalesData([{ name: 'Erro ao carregar', value: 1 }]);
+        return;
+      }
+
+      // Se não houver dados, retorna um array vazio
+      if (!clientsData || clientsData.length === 0) {
+        console.log('Nenhum dado de vendas encontrado');
+        setSalesData([{ name: 'Sem dados', value: 1 }]);
+        return;
+      }
+
+      // Conta a ocorrência de cada status de venda
+      const statusCounts = clientsData.reduce((acc: Record<string, number>, { status }) => {
+        if (!status) return acc;
+        
+        // Padroniza o status para garantir consistência
+        const normalizedStatus = status.trim();
+        acc[normalizedStatus] = (acc[normalizedStatus] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      // Converte para o formato esperado pelo gráfico
+      const salesData = Object.entries(statusCounts).map(([name, value]) => ({
+        name,
+        value,
+        color: COLORS.sales[name as keyof typeof COLORS.sales] || '#8884d8'
+      }));
+
+      setSalesData(salesData);
+    } catch (error) {
+      console.error('Erro ao buscar dados de vendas:', error);
+      setSalesData([{ name: 'Erro ao carregar', value: 1 }]);
+    } finally {
+      setLoadingSales(false);
+    }
+  };
+
   const fetchOrigins = async () => {
     try {
       setLoadingOrigins(true);
@@ -403,9 +487,13 @@ const Dashboard = () => {
         .from('clients')
         .select('origin, broker_id');
       
-      // Se for um corretor, filtra apenas os clientes dele
-      if (user?.role === 'corretor' && user?.broker_id) {
-        console.log('Filtrando origens para o corretor:', user.broker_id);
+      // Aplica o filtro de corretor se selecionado
+      if (selectedBroker !== 'all') {
+        console.log('Filtrando origens para o corretor:', selectedBroker);
+        query = query.eq('broker_id', selectedBroker);
+      } else if (user?.role === 'corretor' && user?.broker_id) {
+        // Se for um corretor e não houver filtro, mostra apenas os clientes dele
+        console.log('Filtrando origens para o corretor logado:', user.broker_id);
         query = query.eq('broker_id', user.broker_id);
       }
       
@@ -463,19 +551,6 @@ const Dashboard = () => {
     }
   };
 
-  // Função para buscar os dados de vendas
-  const fetchSalesData = async () => {
-    try {
-      setLoadingSales(true);
-      
-      // Cria a query base para buscar clientes
-      let query = supabase
-        .from('clients')
-        .select('id, status, broker_id');
-      
-      // Se for um corretor, filtra apenas os clientes dele
-      if (user?.role === 'corretor' && user?.broker_id) {
-        console.log('Filtrando vendas para o corretor:', user.broker_id);
         query = query.eq('broker_id', user.broker_id);
       }
       
@@ -515,86 +590,11 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Erro ao buscar dados de vendas:', error);
       setSalesData([{ name: 'Erro ao carregar', value: 1 }]);
-    } finally {
-      setLoadingSales(false);
-    }
-  };
-
-  // Carrega todos os dados quando o componente é montado
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        await Promise.all([
-          fetchStats(),
-          fetchOrigins(),
-          fetchSchedulingData(),
-          fetchSalesData(),
-          fetchUpcomingAppointments()
-        ]);
-      } catch (error) {
-        console.error('Erro ao carregar dados do dashboard:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadData();
-  }, []);
-
-  // Recarrega os dados específicos do usuário quando ele for alterado
-  useEffect(() => {
-    if (user) {
-      console.log('Usuário alterado, recarregando dados...');
-      const loadUserData = async () => {
-        try {
-          setLoading(true);
-          await Promise.all([
-            fetchSalesData(),
-            fetchOrigins(),
-            fetchSchedulingData(),
-            fetchUpcomingAppointments()
-          ]);
-        } catch (error) {
-          console.error('Erro ao recarregar dados do usuário:', error);
-        } finally {
-          setLoading(false);
-        }
-      };
-      
-      loadUserData();
-    }
-  }, [user?.id, user?.role]);
-
-  // Verifica se o usuário está autenticado
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Carregando informações do usuário...</p>
-        </div>
-      </div>
-    );
   }
+};
 
-  return (
-    <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          {user?.role === 'corretor' && (
-            <p className="text-sm text-muted-foreground">
-              Bem-vindo, {user.name || 'Corretor'}
-            </p>
-          )}
-        </div>
-        <Button
-          variant={showCharts ? 'outline' : 'default'}
-          onClick={() => setShowCharts(!showCharts)}
-          className="gap-2"
-        >
-          <BarChart2 className="h-4 w-4" />
+loadData();
+}, [user?.id, date, selectedBroker]);
           {showCharts ? 'Ocultar gráficos' : 'Mostrar gráficos'}
         </Button>
       </div>

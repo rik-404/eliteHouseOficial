@@ -496,15 +496,7 @@ const EditClient = () => {
                   </ScheduleAppointmentDialog>
                 )}
               </div>
-              <div className="flex gap-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate('/admin/clients')}
-                  disabled={loading}
-                >
-                  Cancelar
-                </Button>
+              <div className="flex justify-end">
                 <Button
                   type="submit"
                   disabled={loading}

@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ScheduleAppointmentDialogProps {
   clientId: string;
@@ -33,18 +34,31 @@ export const ScheduleAppointmentDialog = ({
   const [description, setDescription] = useState('');
   const [brokerId, setBrokerId] = useState('');
   const [brokers, setBrokers] = useState<any[]>([]);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchBrokers = async () => {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('users')
           .select('id, name, broker_id')
           .eq('role', 'corretor')
           .order('name');
 
+        // Se for um corretor, busca apenas o próprio usuário
+        if (user?.role === 'corretor') {
+          query = query.eq('id', user.id);
+        }
+
+        const { data, error } = await query;
+
         if (error) throw error;
         setBrokers(data || []);
+        
+        // Se houver apenas um corretor, seleciona automaticamente
+        if (data?.length === 1) {
+          setBrokerId(data[0].broker_id);
+        }
       } catch (err) {
         console.error('Erro ao carregar corretores:', err);
         setError('Erro ao carregar lista de corretores');
@@ -54,7 +68,7 @@ export const ScheduleAppointmentDialog = ({
     if (open) {
       fetchBrokers();
     }
-  }, [open]);
+  }, [open, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

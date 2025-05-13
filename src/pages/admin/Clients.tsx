@@ -549,11 +549,11 @@ const Clients = () => {
               </SelectContent>
             </Select>
             <Button
-              className="bg-green-500 hover:bg-green-600 text-white flex items-center gap-2"
+              className="bg-green-500 hover:bg-green-600 text-white flex items-center gap-1"
               onClick={() => navigate('/admin/clients/new')}
             >
               <Plus className="w-4 h-4" />
-              Novo Cliente
+              <span>Novo</span>
             </Button>
           </div>
         </div>

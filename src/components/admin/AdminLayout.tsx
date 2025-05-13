@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import Footer from '@/components/layout/Footer';
 import { LayoutDashboard, MessageSquare, User, MoreVertical, LogOut, Users } from 'lucide-react';
 import { useNavigate, Link, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -80,7 +81,7 @@ const AdminLayout = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto bg-gray-100">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-white shadow">
           <div className="flex items-center justify-between px-4 py-4 sm:px-6">
             <h1 className="text-lg font-semibold text-gray-900">Painel Administrativo</h1>
@@ -118,8 +119,11 @@ const AdminLayout = () => {
             </div>
           </div>
         </header>
-        <main className="p-6">
-          <Outlet />
+        <main className="flex-1 overflow-auto p-6">
+          <div className="min-h-[calc(100vh-200px)]">
+            <Outlet />
+          </div>
+          <Footer />
         </main>
       </div>
     </div>

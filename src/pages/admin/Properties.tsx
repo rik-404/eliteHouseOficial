@@ -126,12 +126,13 @@ export const Properties = () => {
     <div className="space-y-6 max-w-7xl mx-auto w-full">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Imóveis</h2>
-        {user?.role !== 'corretor' && (
-          <Button onClick={() => navigate('/admin/properties/new')}>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Imóvel
-          </Button>
-        )}
+        <Button 
+          onClick={() => navigate('/admin/properties/new')}
+          className="bg-green-600 hover:bg-green-700 text-white"
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Novo
+        </Button>
       </div>
 
       <div className="space-y-4">
