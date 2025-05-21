@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/lib/supabase';
+
 import { useNavigate } from 'react-router-dom';
 import { User } from '../../types/user';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/TempAuthContext';
 
 const CreateUser = () => {
   const [name, setName] = useState('');
@@ -15,36 +16,49 @@ const CreateUser = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [birth, setBirth] = useState(null);
+  const [birth, setBirth] = useState('');
   const [cpf, setCpf] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
-  const [emergencyContact, setEmergencyContact] = useState(null);
-  const [emergencyPhone, setEmergencyPhone] = useState(null);
+  const [emergencyContact, setEmergencyContact] = useState('');
+  const [emergencyPhone, setEmergencyPhone] = useState('');
   const [role, setRole] = useState('corretor');
   const [active, setActive] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { user: currentUser } = useAuth();
+  const { user } = useAuth();
 
-  const roleOptions = [
+  const [roleOptions, setRoleOptions] = useState([
     { value: 'corretor', label: 'Corretor' }
-  ];
+  ]);
 
-  if (currentUser?.role === 'dev') {
-    roleOptions.unshift(
-      { value: 'admin', label: 'Administrador' },
-      { value: 'dev', label: 'Desenvolvedor' }
-    );
-  }
+  useEffect(() => {
+    if (user?.role === 'dev') {
+      setRoleOptions([
+        { value: 'admin', label: 'Administrador' },
+        { value: 'dev', label: 'Desenvolvedor' },
+        { value: 'corretor', label: 'Corretor' }
+      ]);
+    }
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validar senha
-    if (!password || password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres');
+    if (!password || password.length < 8) {
+      setError('A senha deve ter pelo menos 8 caracteres');
+      return;
+    }
+
+    // Validar força da senha
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    
+    if (!(hasUpperCase && hasLowerCase && hasNumber)) {
+      setError('A senha deve conter pelo menos uma letra maiúscula, uma letra minúscula e um número');
       return;
     }
 
@@ -151,7 +165,7 @@ const CreateUser = () => {
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email (opcional)</Label>
               <Input
                 id="email"
                 type="email"

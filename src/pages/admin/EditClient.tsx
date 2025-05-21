@@ -7,12 +7,13 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { CalendarIcon, CalendarPlus } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { CalendarIcon, CalendarPlus, ChevronDown, ChevronUp } from 'lucide-react';
+import { useAuth } from '@/contexts/TempAuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScheduleAppointmentDialog } from '@/components/scheduling/ScheduleAppointmentDialog';
+import { ClientDocuments } from '@/components/client/ClientDocuments';
 
 interface ViaCEPResponse {
   cep: string;
@@ -40,6 +41,8 @@ const EditClient = () => {
   const [error, setError] = useState<string | null>(null);
   const [noBrokers, setNoBrokers] = useState(false);
   const [showPermissionError, setShowPermissionError] = useState(false);
+  const [isEditSectionMinimized, setIsEditSectionMinimized] = useState(true);
+  const [isDocumentsSectionMinimized, setIsDocumentsSectionMinimized] = useState(true);
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -157,7 +160,6 @@ const EditClient = () => {
     try {
       // Validar campos obrigatórios
       if (!client?.name) throw new Error('Nome é obrigatório');
-      if (!client?.email) throw new Error('Email é obrigatório');
       if (!client?.phone) throw new Error('Telefone é obrigatório');
       if (!client?.broker_id) throw new Error('Corretor é obrigatório');
       if (!client?.status) throw new Error('Status é obrigatório');
@@ -179,13 +181,13 @@ const EditClient = () => {
           cpf: client.cpf,
           email: client.email,
           phone: client.phone,
-          cep: client.cep,
-          street: client.street,
-          number: client.number,
-          neighborhood: client.neighborhood,
-          city: client.city,
-          state: client.state,
-          complement: client.complement,
+          cep: client.cep || null,
+          street: client.street || null,
+          number: client.number || null,
+          neighborhood: client.neighborhood || null,
+          city: client.city || null,
+          state: client.state || null,
+          complement: client.complement || null,
           broker_id: client.broker_id,
           status: client.status,
           notes: client.notes,
@@ -233,7 +235,16 @@ const EditClient = () => {
 
   return (
     <div className="container mx-auto py-8">
-
+      <div className="flex justify-end mb-4">
+        <Button
+          variant="outline"
+          onClick={() => navigate('/admin/clients')}
+          className="bg-orange-500 hover:bg-orange-600 text-white"
+        >
+          Voltar
+        </Button>
+      </div>
+      
       {error && (
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{error}</AlertDescription>
@@ -246,20 +257,36 @@ const EditClient = () => {
         </Alert>
       )}
 
-      <Card>
-        <CardHeader>
+      <Card className="relative">
+        {/* Removida a mensagem de seção de edição minimizada */}
+        <CardHeader className={isEditSectionMinimized ? 'pb-2' : ''}>
           <div className="flex justify-between items-center">
-            <CardTitle>Editar Cliente</CardTitle>
-            <Button
-              variant="outline"
-              onClick={() => navigate('/admin/clients')}
-              className="bg-orange-500 hover:bg-orange-600 text-white"
-            >
-              Voltar
-            </Button>
+            <div className="flex items-center space-x-4">
+              <CardTitle className={isEditSectionMinimized ? 'opacity-50' : ''}>Editar Cliente</CardTitle>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsEditSectionMinimized(!isEditSectionMinimized)}
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                {isEditSectionMinimized ? (
+                  <>
+                    <ChevronDown className="h-4 w-4 mr-1" />
+                    Mostrar
+                  </>
+                ) : (
+                  <>
+                    <ChevronUp className="h-4 w-4 mr-1" />
+                    Ocultar
+                  </>
+                )}
+              </Button>
+            </div>
+            {/* Botão Voltar movido para o topo da página */}
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className={isEditSectionMinimized ? 'hidden' : ''}>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
@@ -270,7 +297,7 @@ const EditClient = () => {
                       id="name"
                       value={client.name}
                       onChange={(e) => setClient({ ...client, name: e.target.value })}
-                      required
+
                     />
                   </div>
                   <div>
@@ -290,7 +317,7 @@ const EditClient = () => {
                   type="email"
                   value={client.email}
                   onChange={(e) => setClient({ ...client, email: e.target.value })}
-                  required
+
                 />
               </div>
               <div>
@@ -299,7 +326,7 @@ const EditClient = () => {
                   id="phone"
                   value={client.phone}
                   onChange={(e) => setClient({ ...client, phone: e.target.value })}
-                  required
+
                 />
               </div>
               <div>
@@ -312,7 +339,7 @@ const EditClient = () => {
                   <Select
                     value={client.broker_id}
                     onValueChange={(value) => setClient({ ...client, broker_id: value })}
-                    required
+  
                     disabled={loading || noBrokers}
                   >
                     <SelectTrigger>
@@ -509,6 +536,44 @@ const EditClient = () => {
           </form>
         </CardContent>
       </Card>
+
+      {/* Seção de Documentos */}
+      {client && (
+        <Card className="mt-6 relative">
+          {/* Removida a mensagem de seção minimizada */}
+          <CardHeader className={isDocumentsSectionMinimized ? 'pb-2' : ''}>
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-4">
+                <CardTitle className={isDocumentsSectionMinimized ? 'opacity-50' : ''}>
+                  Documentos do Cliente
+                </CardTitle>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsDocumentsSectionMinimized(!isDocumentsSectionMinimized)}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  {isDocumentsSectionMinimized ? (
+                    <>
+                      <ChevronDown className="h-4 w-4 mr-1" />
+                      Mostrar
+                    </>
+                  ) : (
+                    <>
+                      <ChevronUp className="h-4 w-4 mr-1" />
+                      Ocultar
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className={isDocumentsSectionMinimized ? 'hidden' : ''}>
+            <ClientDocuments clientId={client.id} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

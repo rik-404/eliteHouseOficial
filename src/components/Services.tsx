@@ -30,7 +30,7 @@ const Services = () => {
     <section className="py-16 bg-eliteBlue-light">
       <div className="container-custom">
         <div className="text-center mb-12">
-          <h2 className="section-title">Nossos Serviços</h2>
+          <h2 className="section-title text-eliteOrange">Nossos Serviços</h2>
           <p className="section-subtitle">Conheça como a Elite House pode ajudá-lo</p>
         </div>
         

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/TempAuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -23,16 +23,16 @@ type ClientStatus = 'Novo' | 'Atendimento' | 'Análise documental' | 'Análise b
 interface Client {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   phone: string;
   cpf: string;
-  cep: string;
-  street: string;
-  number: string;
-  neighborhood: string;
-  city: string;
-  state: string;
-  complement: string;
+  cep?: string;
+  street?: string;
+  number?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  complement?: string;
   origin: string;
   broker_id: string;
   status: ClientStatus;
@@ -48,16 +48,16 @@ export const NewClient = () => {
   const initialClient: Client = {
     id: '',
     name: '',
-    email: '',
+    email: undefined,
     phone: '',
     cpf: '',
-    cep: '',
-    street: '',
-    number: '',
-    neighborhood: '',
-    city: '',
-    state: '',
-    complement: '',
+    cep: undefined,
+    street: undefined,
+    number: undefined,
+    neighborhood: undefined,
+    city: undefined,
+    state: undefined,
+    complement: undefined,
     origin: '',
     broker_id: user?.role === 'corretor' ? user.broker_id : '',
     status: 'Novo' as ClientStatus,
@@ -235,7 +235,7 @@ export const NewClient = () => {
               id="name"
               value={client.name}
               onChange={(e) => setClient({ ...client, name: e.target.value })}
-              required
+
             />
           </div>
           <div>
@@ -253,7 +253,7 @@ export const NewClient = () => {
               type="email"
               value={client.email}
               onChange={(e) => setClient({ ...client, email: e.target.value })}
-              required
+
             />
           </div>
           <div>
@@ -262,7 +262,7 @@ export const NewClient = () => {
               id="phone"
               value={client.phone}
               onChange={(e) => setClient({ ...client, phone: e.target.value })}
-              required
+
             />
           </div>
           <div>
@@ -275,7 +275,7 @@ export const NewClient = () => {
               <Select
                 value={client.broker_id}
                 onValueChange={(value) => setClient({ ...client, broker_id: value })}
-                required
+  
                 disabled={loading || noBrokers}
               >
                 <SelectTrigger>
@@ -304,7 +304,7 @@ export const NewClient = () => {
               id="cep"
               value={client.cep}
               onChange={handleCEPChange}
-              required
+
             />
           </div>
           <div>
@@ -313,7 +313,7 @@ export const NewClient = () => {
               id="street"
               value={client.street}
               onChange={(e) => setClient({ ...client, street: e.target.value })}
-              required
+
             />
           </div>
           <div>
@@ -322,7 +322,7 @@ export const NewClient = () => {
               id="number"
               value={client.number}
               onChange={(e) => setClient({ ...client, number: e.target.value })}
-              required
+
             />
           </div>
           <div>
@@ -331,7 +331,7 @@ export const NewClient = () => {
               id="neighborhood"
               value={client.neighborhood}
               onChange={(e) => setClient({ ...client, neighborhood: e.target.value })}
-              required
+
             />
           </div>
           <div>
@@ -340,7 +340,7 @@ export const NewClient = () => {
               id="city"
               value={client.city}
               onChange={(e) => setClient({ ...client, city: e.target.value })}
-              required
+
             />
           </div>
           <div>
@@ -349,7 +349,7 @@ export const NewClient = () => {
               id="state"
               value={client.state}
               onChange={(e) => setClient({ ...client, state: e.target.value })}
-              required
+
             />
           </div>
           <div>

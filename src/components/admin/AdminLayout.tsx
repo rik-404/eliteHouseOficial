@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import Footer from '@/components/layout/Footer';
-import { LayoutDashboard, MessageSquare, User, MoreVertical, LogOut, Users } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, User, MoreVertical, LogOut, Users, Clock } from 'lucide-react';
 import { useNavigate, Link, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -39,8 +39,9 @@ const AdminLayout = () => {
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
       <div className="w-64 bg-[#141424] text-white">
-        <div className="flex items-center justify-center h-24 p-4">
+        <div className="flex flex-col items-center justify-center h-24 p-4">
           <img src="/icon.png" alt="Logo" className="h-12 w-auto" />
+          <span className="text-white text-sm mt-2">ImobiFlow</span>
         </div>
         <nav className="mt-4">
           <ul className="space-y-1">
@@ -74,6 +75,12 @@ const AdminLayout = () => {
                 {user?.role !== 'corretor' && (
                   <NotificationBadge count={pendingCount} className="ml-auto" />
                 )}
+              </Link>
+            </li>
+            <li>
+              <Link to="/admin/logs" className="flex items-center px-4 py-2 text-white hover:bg-[#242434] rounded transition-colors duration-200">
+                <Clock className="w-4 h-4 mr-3" />
+                Logs
               </Link>
             </li>
           </ul>

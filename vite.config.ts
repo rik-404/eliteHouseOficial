@@ -15,9 +15,9 @@ export default defineConfig(({ mode }) => ({
         admin: fileURLToPath(new URL('./src/pages/admin/Dashboard.tsx', import.meta.url))
       },
       output: {
-        entryFileNames: 'assets/[name].js',
-        chunkFileNames: 'assets/[name].js',
-        assetFileNames: '[name].[ext]'
+        entryFileNames: 'assets/[name].[hash].js',
+        chunkFileNames: 'assets/[name].[hash].js',
+        assetFileNames: '[name].[hash].[ext]'
       }
     },
     assetsDir: '.',
@@ -29,6 +29,11 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     fs: {
       allow: [__dirname]
+    },
+    hmr: {
+      host: "localhost",
+      port: 8080,
+      protocol: "ws"
     }
   },
   plugins: [

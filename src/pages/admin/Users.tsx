@@ -8,7 +8,7 @@ import { Search, Pencil, Trash } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
 import { Switch } from '@/components/ui/switch';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/TempAuthContext';
 import { User } from '../../types/user';
 import { PasswordConfirmationModal } from '@/components/admin/PasswordConfirmationModal';
 
@@ -87,6 +87,11 @@ const Users = () => {
       if (!targetUserId) return;
 
       setLoading(true);
+      // Verifica se o usuário está tentando excluir a si mesmo
+      if (currentUser?.id === targetUserId) {
+        throw new Error('Não é possível excluir a própria conta');
+      }
+
       const { error } = await supabase
         .from('users')
         .delete()

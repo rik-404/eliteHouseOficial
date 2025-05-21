@@ -14,7 +14,7 @@ const Footer = () => {
               ImobiFlow — Powered by Vendramini Informática | © {new Date().getFullYear()}
             </div>
             <div className="flex items-center space-x-6">
-              <span className="text-sm text-gray-500">Versão 1.0.0</span>
+              <span className="text-sm text-gray-500">Versão 1.5.7</span>
               <button 
                 className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
                 onClick={() => setShowTerms(true)}

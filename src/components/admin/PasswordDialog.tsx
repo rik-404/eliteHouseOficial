@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/TempAuthContext';
 
 interface PasswordDialogProps {
   onConfirm: () => void;
@@ -28,12 +28,26 @@ const PasswordDialog = ({ onConfirm }: PasswordDialogProps) => {
       });
 
       if (signInError) {
-        throw signInError;
+        if (signInError.message.includes('incorrect password')) {
+          throw new Error('Senha incorreta');
+        } else if (signInError.message.includes('user not found')) {
+          throw new Error('Usuário não encontrado');
+        } else if (signInError.message.includes('network error')) {
+          throw new Error('Erro de rede. Por favor, tente novamente mais tarde.');
+        } else if (signInError.message.includes('rate limit')) {
+          throw new Error('Muitas tentativas. Por favor, aguarde alguns minutos.');
+        } else {
+          throw new Error('Erro ao verificar senha. Por favor, tente novamente.');
+        }
       }
 
       onConfirm();
     } catch (err) {
-      setError('Senha incorreta');
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Erro ao verificar senha. Por favor, tente novamente.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -41,7 +55,7 @@ const PasswordDialog = ({ onConfirm }: PasswordDialogProps) => {
 
   return (
     <Dialog>
-      <DialogTrigger>
+      <DialogTrigger asChild>
         <Button variant="destructive">Excluir</Button>
       </DialogTrigger>
       <DialogContent>

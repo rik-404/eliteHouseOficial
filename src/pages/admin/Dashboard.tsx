@@ -15,6 +15,83 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { User } from '@/types/user';
+import { useAuth } from '@/contexts/AuthContext';
+
+// Componente para o funil de vendas
+const SalesFunnel = ({ data, onClick }: { data: any[], onClick: (status: string, count: number) => void }) => {
+  // Status do Kanban e suas cores
+  const statusColors = {
+    'Novo': '#0096FF',
+    'Atendimento': '#20B2AA',
+    'Análise documental': '#8A2BE2',
+    'Análise bancária': '#9370DB',
+    'Aprovado': '#22C55E',
+    'Condicionado': '#FF8C00',
+    'Reprovado': '#E34234',
+    'Venda realizada': '#1E90FF',
+    'Distrato': '#555555'
+  };
+
+  // Total de movimentos
+  const total = data.reduce((sum, item) => sum + item.count, 0);
+
+  // Ordenar os status na ordem do funil
+  const funnelOrder = [
+    'Novo',
+    'Atendimento',
+    'Análise documental',
+    'Análise bancária',
+    'Condicionado',
+    'Aprovado',
+    'Reprovado',
+    'Venda realizada',
+    'Distrato'
+  ];
+
+  // Ordenar os dados de acordo com a ordem do funil
+  const sortedData = [...data].sort((a, b) => {
+    return funnelOrder.indexOf(a.status) - funnelOrder.indexOf(b.status);
+  });
+
+  return (
+    <div className="bg-white p-3 rounded-lg shadow-sm">
+      <h3 className="text-base font-semibold mb-2 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M3 3a1 1 0 000 2h11a1 1 0 100-2H3zM3 7a1 1 0 000 2h5a1 1 0 000-2H3zM3 11a1 1 0 100 2h4a1 1 0 100-2H3zM13 16a1 1 0 102 0v-5.586l1.293 1.293a1 1 0 001.414-1.414l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 101.414 1.414L13 10.414V16z" />
+        </svg>
+        Funil de vendas
+      </h3>
+      <div className="flex flex-col items-center space-y-0.5 max-w-sm mx-auto">
+        {sortedData.map((item, index) => {
+          // Calcular a largura do item com base na posição no funil
+          // Primeiro item tem 95% de largura, último tem 60%
+          const widthPercentage = 95 - (index * 3.5);
+          const width = Math.max(60, widthPercentage);
+          
+          return (
+            <div 
+              key={item.status} 
+              className="rounded-full py-0.5 px-2 text-center cursor-pointer hover:opacity-90 transition-opacity shadow-sm mb-0.5"
+              style={{ 
+                backgroundColor: statusColors[item.status as keyof typeof statusColors] || '#9e9e9e',
+                width: `${width}%`,
+                transform: 'translateX(0%)',
+              }}
+              onClick={() => onClick(item.status, item.count)}
+            >
+              <div className="font-medium text-white text-xs">{item.status}</div>
+              <div className="text-base font-bold text-white">{item.count}</div>
+            </div>
+          );
+        })}
+        <div className="mt-1 text-center font-medium w-full">
+          <div className="text-base font-bold">{total} movimentos de venda</div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Cores para os gráficos
 const COLORS = {
@@ -56,43 +133,17 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
   );
 };
 
-interface User {
-  id: string;
-  name?: string;
-  email: string;
-  role?: string;
-  broker_id?: string;
-}
-
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
   const [user, setUser] = useState<User | null>(null);
 
-  // Carrega o usuário do localStorage quando o componente é montado
+  // Carrega o usuário do AuthContext quando o componente é montado
   useEffect(() => {
-    const loadUserFromLocalStorage = () => {
-      try {
-        const userData = localStorage.getItem('currentUser');
-        if (userData) {
-          const parsedUser = JSON.parse(userData);
-          if (parsedUser && parsedUser.id) {
-            const userObj: User = {
-              id: parsedUser.id.toString(),
-              name: parsedUser.name || parsedUser.email?.split('@')[0] || 'Usuário',
-              email: parsedUser.email || '',
-              role: parsedUser.role || 'user',
-              broker_id: parsedUser.broker_id
-            };
-            setUser(userObj);
-          }
-        }
-      } catch (error) {
-        console.error('Erro ao carregar usuário do localStorage:', error);
-      }
-    };
-
-    loadUserFromLocalStorage();
-  }, []);
+    if (authUser) {
+      setUser(authUser);
+    }
+  }, [authUser]);
   
   const handleSalesPieClick = (data: any, index: number) => {
     console.log('Dados do clique no gráfico de vendas:', data, 'Índice:', index);
@@ -206,6 +257,81 @@ const Dashboard = () => {
   
   // Estado para armazenar os dados de vendas
   const [salesData, setSalesData] = useState<{name: string, value: number}[]>([]);
+  
+  // Estado para armazenar os dados do funil de vendas
+  const [funnelData, setFunnelData] = useState<{status: string, count: number}[]>([]);
+  const [loadingFunnel, setLoadingFunnel] = useState(true);
+  const [isFunnelMinimized, setIsFunnelMinimized] = useState(true);
+
+  // Função para lidar com o clique em um item do funil
+  const handleFunnelClick = (status: string, count: number) => {
+    console.log(`Clicou em ${status} com ${count} registros`);
+    navigate(`/admin/clients?status=${encodeURIComponent(status)}`);
+  };
+
+  // Função para buscar os dados do funil de vendas
+  const fetchFunnelData = async () => {
+    try {
+      setLoadingFunnel(true);
+      
+      // Status do Kanban que queremos contar
+      const kanbanStatus = [
+        'Novo',
+        'Atendimento',
+        'Análise documental',
+        'Análise bancária',
+        'Aprovado',
+        'Condicionado',
+        'Reprovado',
+        'Venda realizada',
+        'Distrato'
+      ];
+      
+      // Cria a query base para buscar clientes
+      let query = supabase
+        .from('clients')
+        .select('id, status, broker_id');
+      
+      // Se for um corretor, filtra apenas os clientes dele
+      if (user?.role === 'corretor' && user?.broker_id) {
+        query = query.eq('broker_id', user.broker_id);
+      }
+      
+      const { data: clients, error } = await query;
+      
+      if (error) throw error;
+
+      // Conta quantos clientes existem por status do Kanban
+      const statusCounts: Record<string, number> = {};
+      
+      // Inicializa todos os status com zero
+      kanbanStatus.forEach(status => {
+        statusCounts[status] = 0;
+      });
+      
+      // Conta os clientes por status
+      clients?.forEach(client => {
+        const status = client?.status || 'Novo';
+        if (kanbanStatus.includes(status)) {
+          statusCounts[status] = (statusCounts[status] || 0) + 1;
+        }
+      });
+
+      // Formata os dados para o componente
+      const formattedData = kanbanStatus.map(status => ({
+        status,
+        count: statusCounts[status] || 0
+      }));
+
+      console.log('Dados do funil de vendas:', formattedData);
+      setFunnelData(formattedData);
+    } catch (error) {
+      console.error('Erro ao buscar dados do funil de vendas:', error);
+      setFunnelData([]);
+    } finally {
+      setLoadingFunnel(false);
+    }
+  };
 
   const fetchStats = async () => {
     try {
@@ -530,7 +656,8 @@ const Dashboard = () => {
           fetchOrigins(),
           fetchSchedulingData(),
           fetchSalesData(),
-          fetchUpcomingAppointments()
+          fetchUpcomingAppointments(),
+          fetchFunnelData()
         ]);
       } catch (error) {
         console.error('Erro ao carregar dados do dashboard:', error);
@@ -553,7 +680,8 @@ const Dashboard = () => {
             fetchSalesData(),
             fetchOrigins(),
             fetchSchedulingData(),
-            fetchUpcomingAppointments()
+            fetchUpcomingAppointments(),
+            fetchFunnelData()
           ]);
         } catch (error) {
           console.error('Erro ao recarregar dados do usuário:', error);
@@ -571,8 +699,17 @@ const Dashboard = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Carregando informações do usuário...</p>
+          {loading ? (
+            <>
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+              <p>Carregando informações do usuário...</p>
+            </>
+          ) : (
+            <>
+              <p className="text-red-500">Erro ao carregar informações do usuário</p>
+              <Button onClick={() => window.location.reload()}>Tentar novamente</Button>
+            </>
+          )}
         </div>
       </div>
     );
@@ -723,6 +860,43 @@ const Dashboard = () => {
             </p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Funil de Vendas */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Funil de Vendas</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsFunnelMinimized(!isFunnelMinimized)}
+            className="flex items-center gap-2"
+          >
+            {isFunnelMinimized ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
+              </svg>
+            )}
+            {isFunnelMinimized ? 'Expandir' : 'Minimizar'}
+          </Button>
+        </div>
+        {loadingFunnel ? (
+          <div className="flex items-center justify-center h-40 bg-white rounded-lg shadow-sm p-4">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        ) : isFunnelMinimized ? (
+          <div className="flex items-center justify-center h-16 bg-white rounded-lg shadow-sm">
+            <div className="text-sm text-muted-foreground">
+              {funnelData.reduce((sum, item) => sum + item.count, 0)} movimentos de venda
+            </div>
+          </div>
+        ) : (
+          <SalesFunnel data={funnelData} onClick={handleFunnelClick} />
+        )}
       </div>
 
       {/* Seção de Gráficos */}

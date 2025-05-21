@@ -1,4 +1,5 @@
 export interface User {
+  auth_id: string;
   id: string;
   broker_id: string | null;
   username: string;

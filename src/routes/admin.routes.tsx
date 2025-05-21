@@ -2,6 +2,12 @@ import { lazy } from 'react';
 import { Navigate } from 'react-router-dom';
 import type { RouteObject } from 'react-router-dom';
 
+const ActivityLogs = lazy(() => import('../pages/admin/ActivityLogs').then(module => ({ default: module.ActivityLogs })));
+
+const ActivityLogsPage = () => (
+  <ActivityLogs />
+);
+
 const Dashboard = lazy(() => import('../pages/admin/Dashboard'));
 const Users = lazy(() => import('../pages/admin/Users'));
 const CreateUser = lazy(() => import('../pages/admin/CreateUser'));
@@ -41,6 +47,10 @@ export const adminRoutes: RouteObject[] = [
   {
     path: '/admin/profile',
     element: <Profile />
+  },
+  {
+    path: '/admin/logs',
+    element: <ActivityLogsPage />
   },
   {
     path: '/admin/properties',

@@ -1,0 +1,2 @@
+id,user_id,user_name,action,entity_type,entity_id,entity_name,timestamp,ip_address,details,created_at,updated_at
+bfea5cc9-ee53-4df7-808e-af070c198ad0,4fad2f15-f230-46a0-a21e-d0c10801cbcd,vendramini,delete,client,4fad2f15-f230-46a0-a21e-d0c10801cbcd,pabullo,2025-05-15 20:58:31.003031+00,192.168.0.1,,2025-05-15 20:58:31.003031+00,2025-05-15 20:58:31.003031+00

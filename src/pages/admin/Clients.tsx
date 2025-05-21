@@ -7,13 +7,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, SquareKanban, List, Pencil, Trash, Plus } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/TempAuthContext';
 import { Client } from '../../types/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import PasswordDialog from '@/components/admin/PasswordDialog';
 import { Card, CardContent } from '@/components/ui/card';
 import ClientKanban from '@/components/admin/ClientKanban';
 import AssignBrokerModal from '@/components/admin/AssignBrokerModal';
+import { useActivityLog } from '@/hooks/useActivityLog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 const statusColors = {
@@ -98,11 +100,38 @@ const Clients = () => {
     };
   }, [user?.broker_id]);
 
-  const handleDelete = (client: Client) => {
+  const checkScheduledVisits = async (clientId: string) => {
+    try {
+      const { data: visits, error } = await supabase
+        .from('scheduling')
+        .select('id')
+        .eq('client_id', clientId)
+        .not('status', 'in', ['concluido', 'cancelado']);
+
+      if (error) {
+        console.error('Erro ao verificar visitas:', error);
+        return false;
+      }
+
+      return visits?.length > 0;
+    } catch (error) {
+      console.error('Erro ao verificar visitas:', error);
+      return false;
+    }
+  };
+
+  const handleDelete = async (client: Client) => {
     if (user?.role === 'corretor') {
       setError('Corretores não podem excluir clientes');
       return;
     }
+
+    const hasScheduledVisits = await checkScheduledVisits(client.id);
+    if (hasScheduledVisits) {
+      setError('Este cliente possui visitas agendadas. Por favor, cancele ou conclua as visitas antes de excluir o cliente.');
+      return;
+    }
+
     setClientToDelete(client);
     setDeleteDialogOpen(true);
   };
@@ -141,24 +170,88 @@ const Clients = () => {
     }
   };
 
+  const { logDelete } = useActivityLog();
+
   const confirmDelete = async () => {
     if (!clientToDelete) return;
 
     try {
-      const { error: deleteError } = await supabase
+      // Primeiro busca os documentos do cliente para excluí-los
+      const { data: clientDocuments, error: documentsError } = await supabase
+        .from('client_documents')
+        .select('id, file_path')
+        .eq('client_id', clientToDelete.id);
+
+      if (documentsError) {
+        throw documentsError;
+      }
+
+      // Exclui cada documento do storage e do banco de dados
+      if (clientDocuments && clientDocuments.length > 0) {
+        // Exclui os arquivos do storage
+        const filePaths = clientDocuments.map(doc => doc.file_path);
+        if (filePaths.length > 0) {
+          const { error: storageError } = await supabase.storage
+            .from('documents')
+            .remove(filePaths);
+
+          if (storageError) {
+            console.error('Erro ao excluir arquivos do storage:', storageError);
+            // Continuamos mesmo com erro no storage para garantir que os registros sejam removidos
+          }
+        }
+
+        // Exclui os registros de documentos do banco de dados
+        const { error: deleteDocsError } = await supabase
+          .from('client_documents')
+          .delete()
+          .eq('client_id', clientToDelete.id);
+
+        if (deleteDocsError) {
+          throw deleteDocsError;
+        }
+      }
+
+      // Exclui as visitas relacionadas
+      const { error: deleteVisitsError } = await supabase
+        .from('scheduling')
+        .delete()
+        .eq('client_id', clientToDelete.id);
+
+      if (deleteVisitsError) {
+        throw deleteVisitsError;
+      }
+
+      // Por último, exclui o cliente
+      const { error: deleteClientError } = await supabase
         .from('clients')
         .delete()
         .eq('id', clientToDelete.id);
 
-      if (deleteError) {
-        throw deleteError;
+      if (deleteClientError) {
+        throw deleteClientError;
       }
+
+      // Usar broker_id do usuário
+      const brokerId = user?.broker_id;
+      
+      if (!brokerId) {
+        throw new Error('Broker ID não encontrado');
+      }
+
+      await logDelete(
+        'clients',
+        clientToDelete.id,
+        `Cliente ${clientToDelete.name} excluído (incluindo visitas agendadas)`,
+        clientToDelete.name,
+        brokerId
+      );
 
       await fetchClients();
       setDeleteDialogOpen(false);
     } catch (error) {
       console.error('Erro ao excluir cliente:', error);
-      setError('Erro ao excluir cliente');
+      setError('Erro ao excluir cliente. Por favor, tente novamente.');
     }
   };
 

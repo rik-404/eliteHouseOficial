@@ -1,0 +1,1 @@
+INSERT INTO "public"."scheduling" ("id", "titulo", "descricao", "data", "hora", "broker_id", "client_id", "status") VALUES ('60640824-3e8c-4c8d-81e6-a4497b1e1575', 'teste', '', '2025-05-18', '09:00:00', '3a805162-5c46-4087-a5a4-075585af3eec', 'cd2eb3e2-a3a6-4c0f-a7ce-a05705f54c4a', 'Nao_Realizado');
