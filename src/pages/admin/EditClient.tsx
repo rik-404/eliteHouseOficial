@@ -14,6 +14,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScheduleAppointmentDialog } from '@/components/scheduling/ScheduleAppointmentDialog';
 import { ClientDocuments } from '@/components/client/ClientDocuments';
+import { ClientAppointmentHistory } from '@/components/client/ClientAppointmentHistory';
 
 interface ViaCEPResponse {
   cep: string;
@@ -43,6 +44,7 @@ const EditClient = () => {
   const [showPermissionError, setShowPermissionError] = useState(false);
   const [isEditSectionMinimized, setIsEditSectionMinimized] = useState(true);
   const [isDocumentsSectionMinimized, setIsDocumentsSectionMinimized] = useState(true);
+  const [isAppointmentsSectionMinimized, setIsAppointmentsSectionMinimized] = useState(true);
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -503,25 +505,7 @@ const EditClient = () => {
             </div>
             <div className="flex justify-between pt-4">
               <div>
-                {client && (
-                  <ScheduleAppointmentDialog 
-                    clientId={client.id} 
-                    clientName={client.name}
-                    onSuccess={() => {
-                      // Atualiza o status do cliente para 'Aguardando' após o agendamento
-                      setClient(prev => prev ? { ...prev, scheduling: 'Aguardando' } : null);
-                    }}
-                  >
-                    <Button 
-                      type="button" 
-                      variant="outline"
-                      className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
-                    >
-                      <CalendarPlus className="h-4 w-4" />
-                      Agendar Visita
-                    </Button>
-                  </ScheduleAppointmentDialog>
-                )}
+                {/* Botão "Agendar Visita" movido para a seção de histórico de agendamentos */}
               </div>
               <div className="flex justify-end">
                 <Button
@@ -562,7 +546,7 @@ const EditClient = () => {
                   ) : (
                     <>
                       <ChevronUp className="h-4 w-4 mr-1" />
-                      Ocultar
+                      Esconder
                     </>
                   )}
                 </Button>
@@ -571,6 +555,64 @@ const EditClient = () => {
           </CardHeader>
           <CardContent className={isDocumentsSectionMinimized ? 'hidden' : ''}>
             <ClientDocuments clientId={client.id} />
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Seção de Histórico de Agendamentos */}
+      {client && (
+        <Card className="mt-6 relative">
+          <CardHeader className={isAppointmentsSectionMinimized ? 'pb-2' : ''}>
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-4">
+                <CardTitle className={isAppointmentsSectionMinimized ? 'opacity-50' : ''}>
+                  Histórico de Agendamentos
+                </CardTitle>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsAppointmentsSectionMinimized(!isAppointmentsSectionMinimized)}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  {isAppointmentsSectionMinimized ? (
+                    <>
+                      <ChevronDown className="h-4 w-4 mr-1" />
+                      Mostrar
+                    </>
+                  ) : (
+                    <>
+                      <ChevronUp className="h-4 w-4 mr-1" />
+                      Esconder
+                    </>
+                  )}
+                </Button>
+              </div>
+              <div>
+                {client && (
+                  <ScheduleAppointmentDialog 
+                    clientId={client.id} 
+                    clientName={client.name}
+                    onSuccess={() => {
+                      // Atualiza o status do cliente para 'Aguardando' após o agendamento
+                      setClient(prev => prev ? { ...prev, scheduling: 'Aguardando' } : null);
+                    }}
+                  >
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      className="flex items-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                    >
+                      <CalendarPlus className="h-4 w-4" />
+                      Agendar Visita
+                    </Button>
+                  </ScheduleAppointmentDialog>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className={isAppointmentsSectionMinimized ? 'hidden' : ''}>
+            <ClientAppointmentHistory clientId={client.id} />
           </CardContent>
         </Card>
       )}
