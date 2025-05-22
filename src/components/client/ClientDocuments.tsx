@@ -110,62 +110,34 @@ export const ClientDocuments: React.FC<ClientDocumentsProps> = ({ clientId }) =>
         throw new Error(`O bucket de armazenamento não existe. Por favor, crie o bucket "${storageConfig.bucket}" no painel do Supabase.`);
       }
       
-      // 3. Solução alternativa: em vez de fazer upload para o Supabase Storage,
-      // vamos apenas salvar os metadados no banco de dados e simular um upload bem-sucedido
-      console.log('Usando solução alternativa para contornar problemas de permissão do Storage');
+      // 3. Fazer upload real para o Supabase Storage
+      console.log('Iniciando upload real para o Supabase Storage');
       
       // Gerar um nome de arquivo único baseado no timestamp e nome original
       const fileExt = selectedFile.name.split('.').pop()?.toLowerCase() || 'pdf';
       const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}.${fileExt}`;
       
-      // Criar uma URL local para o arquivo (não será acessível externamente)
-      // Em um ambiente de produção, você usaria um serviço de armazenamento real
-      const localUrl = URL.createObjectURL(selectedFile);
+      // Caminho completo do arquivo no Storage
+      const storagePath = `client-documents/${clientId}/${uniqueFileName}`;
       
-      // Simular dados de upload bem-sucedido
-      const uploadData = {
-        Key: filePath,
-        ETag: 'simulado',
-        path: filePath,
-        fullPath: filePath,
-        id: uniqueFileName,
-        name: selectedFile.name
-      };
+      // Fazer o upload real para o Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from(storageConfig.bucket)
+        .upload(storagePath, selectedFile, {
+          cacheControl: '3600',
+          upsert: true
+        });
       
-      // Não há erro nesta abordagem simulada
-      let uploadError = null;
+      console.log('Resultado do upload:', uploadData, uploadError);
       
-      console.log('Simulação de upload bem-sucedida:', uploadData);
-      
-      // Exibir um alerta informando sobre a solução alternativa
-      toast.info(
-        'Modo de demonstração: O arquivo não foi realmente enviado para o servidor devido a restrições de permissão. Em um ambiente de produção, configure as políticas de segurança no Supabase.',
-        { duration: 6000 }
-      );
-
       if (uploadError) {
         console.error('Erro no upload do arquivo:', uploadError);
-        
-        if (uploadError.message.includes('size')) {
-          throw new Error('O arquivo é muito grande. O tamanho máximo permitido é 50MB.');
-        }
-        
-        if (uploadError.message.includes('type')) {
-          throw new Error('Tipo de arquivo não suportado. Use PDF, JPG ou PNG.');
-        }
-        
-        if (uploadError.message.includes('bucket')) {
-          throw new Error('O bucket de armazenamento não existe. Por favor, crie o bucket "documents" no painel do Supabase.');
-        }
-        
-        if (uploadError.message.includes('security policy')) {
-          throw new Error('Erro de permissão. Verifique as políticas de segurança no painel do Supabase.');
-        }
-        
-        throw new Error(`Falha no upload: ${uploadError.message}`);
+        toast.error(`Erro no upload: ${uploadError.message}`, { duration: 5000 });
+        throw uploadError;
       }
-      
+
       if (!uploadData) {
+        console.error('Nenhum dado retornado do upload');
         throw new Error('Falha no upload: nenhum dado retornado');
       }
       
@@ -173,10 +145,10 @@ export const ClientDocuments: React.FC<ClientDocumentsProps> = ({ clientId }) =>
 
       console.log('Upload concluído, obtendo URL pública...');
       
-      // Usar a URL local criada anteriormente em vez de obter do Supabase
-      const urlData = {
-        publicUrl: localUrl
-      };
+      // Obter a URL pública do arquivo no Supabase Storage
+      const { data: urlData } = await supabase.storage
+        .from(storageConfig.bucket)
+        .getPublicUrl(storagePath);
 
       console.log('Salvando metadados no banco de dados...');
       
@@ -188,8 +160,8 @@ export const ClientDocuments: React.FC<ClientDocumentsProps> = ({ clientId }) =>
             client_id: clientId,
             document_type: documentType,
             file_name: selectedFile.name,
-            file_url: urlData.publicUrl, // URL local temporária
-            file_path: `local://${uniqueFileName}`, // Caminho local simulado
+            file_url: urlData.publicUrl, // URL pública do Supabase
+            file_path: storagePath, // Caminho real no Supabase Storage
             file_size: selectedFile.size,
             file_type: selectedFile.type,
             description: description || null,
@@ -270,16 +242,24 @@ export const ClientDocuments: React.FC<ClientDocumentsProps> = ({ clientId }) =>
       // Array para armazenar promessas de download
       const downloadPromises = documents.map(async (doc) => {
         try {
-          // Se for uma URL local (modo de demonstração)
-          if (doc.file_path.startsWith('local://')) {
-            // Tentar obter o blob da URL local
-            const response = await fetch(doc.file_url);
-            if (response.ok) {
-              const blob = await response.blob();
-              // Adicionar o arquivo ao ZIP com um nome legível
-              const safeFileName = `${doc.document_type}_${doc.file_name}`;
-              zip.file(safeFileName, blob);
+          // Verificar se o caminho é válido
+          if (!doc.file_path || doc.file_path.startsWith('local://')) {
+            console.warn('Caminho de arquivo inválido ou local:', doc.file_path);
+            // Tentar usar a URL pública se disponível
+            if (doc.file_url) {
+              try {
+                const response = await fetch(doc.file_url);
+                if (response.ok) {
+                  const blob = await response.blob();
+                  // Adicionar o arquivo ao ZIP com um nome legível
+                  const safeFileName = `${doc.document_type}_${doc.file_name}`;
+                  zip.file(safeFileName, blob);
+                }
+              } catch (error) {
+                console.error('Erro ao baixar arquivo da URL pública:', error);
+              }
             }
+          
           } else {
             // É um arquivo no Supabase Storage
             // Tentar baixar o arquivo do Supabase

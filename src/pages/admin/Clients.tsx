@@ -106,7 +106,7 @@ const Clients = () => {
         .from('scheduling')
         .select('id')
         .eq('client_id', clientId)
-        .not('status', 'in', ['concluido', 'cancelado']);
+        .not('status', 'in', '(concluido,cancelado)');
 
       if (error) {
         console.error('Erro ao verificar visitas:', error);

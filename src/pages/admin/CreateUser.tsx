@@ -34,10 +34,16 @@ const CreateUser = () => {
   ]);
 
   useEffect(() => {
+    // Desenvolvedores podem criar usuários em qualquer nível
     if (user?.role === 'dev') {
       setRoleOptions([
         { value: 'admin', label: 'Administrador' },
         { value: 'dev', label: 'Desenvolvedor' },
+        { value: 'corretor', label: 'Corretor' }
+      ]);
+    } else if (user?.role === 'admin') {
+      // Administradores só podem criar corretores
+      setRoleOptions([
         { value: 'corretor', label: 'Corretor' }
       ]);
     }
@@ -70,6 +76,12 @@ const CreateUser = () => {
     setLoading(true);
 
     try {
+      // Verificar permissões
+      if (user?.role !== 'dev' && role !== 'corretor') {
+        setError('Você não tem permissão para criar usuários com este nível de acesso.');
+        return;
+      }
+
       // Criar o usuário diretamente na tabela users
       const { data: userData, error: userError } = await supabase
         .from('users')

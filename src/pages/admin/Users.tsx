@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/TempAuthContext';
 import { User } from '../../types/user';
-import { PasswordConfirmationModal } from '@/components/admin/PasswordConfirmationModal';
+// Removida importação do modal de confirmação com senha
 
 const Users = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -19,10 +19,9 @@ const Users = () => {
   const [loading, setLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [noPermission, setNoPermission] = useState(false);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [targetUserId, setTargetUserId] = useState<string | null>(null);
+  // Estados relacionados à confirmação com senha foram removidos
   const navigate = useNavigate();
-  const { user: currentUser, confirmPassword } = useAuth();
+  const { user: currentUser } = useAuth();
 
   useEffect(() => {
     fetchUsers();
@@ -75,38 +74,43 @@ const Users = () => {
 
   const handleDelete = async (userId: string) => {
     try {
-      setTargetUserId(userId);
-      setShowPasswordModal(true);
+      // Agora apenas define o ID do usuário para confirmação visual
+      setConfirmDelete(userId);
     } catch (error) {
       console.error('Erro ao iniciar processo de exclusão:', error);
     }
   };
 
-  const confirmDeleteWithPassword = async () => {
+  const confirmDeleteUser = async () => {
     try {
-      if (!targetUserId) return;
-
+      if (!confirmDelete) return;
+      
+      // Processo simplificado sem necessidade de targetUserId
       setLoading(true);
       // Verifica se o usuário está tentando excluir a si mesmo
-      if (currentUser?.id === targetUserId) {
+      if (currentUser?.id === confirmDelete) {
         throw new Error('Não é possível excluir a própria conta');
       }
 
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', targetUserId);
+      // Verificar se o usuário atual é um desenvolvedor ou se está tentando excluir um corretor
+      if (currentUser?.role === 'dev' || (currentUser?.role === 'admin' && users.find(u => u.id === confirmDelete)?.role === 'corretor')) {
+        const { error } = await supabase
+          .from('users')
+          .delete()
+          .eq('id', confirmDelete);
+          
+        if (error) throw error;
+      } else {
+        throw new Error('Você não tem permissão para excluir este usuário');
+      }
 
-      if (error) throw error;
-
-      setUsers(prev => prev.filter(user => user.id !== targetUserId));
+      setUsers(prev => prev.filter(user => user.id !== confirmDelete));
       setConfirmDelete(null);
-      setTargetUserId(null);
     } catch (error) {
       console.error('Erro ao deletar usuário:', error);
     } finally {
       setLoading(false);
-      setShowPasswordModal(false);
+      setConfirmDelete(null);
     }
   };
 
@@ -134,14 +138,7 @@ const Users = () => {
         >
           + Novo Usuário
         </Button>
-        <PasswordConfirmationModal
-          open={showPasswordModal}
-          onConfirm={confirmDeleteWithPassword}
-          onClose={() => {
-            setShowPasswordModal(false);
-            setTargetUserId(null);
-          }}
-        />
+        {/* Modal de confirmação com senha removido */}
       </div>
 
       <div className="flex items-center space-x-4">
@@ -228,24 +225,26 @@ const Users = () => {
                     <Button
                       variant="outline"
                       onClick={() => {
-                        if (currentUser?.role === 'admin') {
+                        // Desenvolvedores podem excluir qualquer conta
+                        if (currentUser?.role === 'dev') {
+                          setConfirmDelete(user.id);
+                        } else if (currentUser?.role === 'admin') {
+                          // Administradores só podem excluir corretores
                           if (user.role === 'corretor') {
                             setConfirmDelete(user.id);
                           } else {
                             setNoPermission(true);
                           }
-                        } else if (currentUser?.role === 'dev') {
-                          setConfirmDelete(user.id);
                         } else {
                           setNoPermission(true);
                         }
                       }}
                       className={`
-                        ${currentUser?.role === 'admin' && user.role === 'corretor' || currentUser?.role === 'dev'
+                        ${(currentUser?.role === 'dev') || (currentUser?.role === 'admin' && user.role === 'corretor')
                           ? 'bg-red-500 hover:bg-red-600'
                           : 'bg-gray-500 hover:bg-gray-600'}
                         text-white ${
-                          (currentUser?.role === 'admin' && user.role === 'corretor') || currentUser?.role === 'dev'
+                          currentUser?.role === 'dev' || (currentUser?.role === 'admin' && user.role === 'corretor')
                             ? 'cursor-pointer'
                             : 'cursor-not-allowed'
                         }
@@ -274,7 +273,7 @@ const Users = () => {
                 Cancelar
               </Button>
               <Button
-                onClick={() => handleDelete(confirmDelete)}
+                onClick={() => confirmDeleteUser()}
                 className="bg-gray-800 hover:bg-gray-700 text-white"
               >
                 Excluir
