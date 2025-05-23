@@ -14,7 +14,7 @@ const Footer = () => {
               ImobiFlow — Powered by Vendramini Informática | © {new Date().getFullYear()}
             </div>
             <div className="flex items-center space-x-6">
-              <span className="text-sm text-gray-500">Versão 1.5.7</span>
+              <span className="text-sm text-gray-500">Versão 1.6.0</span>
               <button 
                 className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
                 onClick={() => setShowTerms(true)}
@@ -50,7 +50,7 @@ const Footer = () => {
               </div>
               
               <div className="text-sm text-gray-700 space-y-4">
-                <p className="text-gray-500 mb-6">Última atualização: 13 de maio de 2025</p>
+                <p className="text-gray-500 mb-6">Última atualização: 23 de maio de 2025</p>
                 
                 <p className="mb-4">
                   Bem-vindo ao ImobiFlow, um sistema de gerenciamento (CRM) e dashboard desenvolvido para o setor imobiliário, fornecido por Vendramini Informática.
@@ -82,7 +82,13 @@ const Footer = () => {
                   </div>
                   
                   <div>
-                    <h3 className="font-semibold mb-2">5. Responsabilidades</h3>
+                    <h3 className="font-semibold mb-2">5. Acesso aos Dados de Clientes</h3>
+                    <p>Apenas usuários autorizados pela empresa contratante poderão acessar os dados de clientes cadastrados no sistema. Cada empresa é responsável por definir os níveis de acesso de seus colaboradores, garantindo que apenas pessoas com permissão adequada possam visualizar, editar ou excluir dados sensíveis.</p>
+                    <p>A Vendramini Informática não acessa nem utiliza dados de clientes cadastrados, salvo quando expressamente autorizado pela empresa contratante para fins de suporte técnico, correção de erros ou auditoria de segurança.</p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="font-semibold mb-2">6. Responsabilidades</h3>
                     <p className="mb-2">A Vendramini Informática não se responsabiliza por:</p>
                     <ul className="list-disc pl-6 space-y-1 mb-2">
                       <li>Danos causados por mau uso do sistema;</li>
@@ -92,17 +98,17 @@ const Footer = () => {
                   </div>
                   
                   <div>
-                    <h3 className="font-semibold mb-2">6. Suporte Técnico</h3>
+                    <h3 className="font-semibold mb-2">7. Suporte Técnico</h3>
                     <p>O suporte ao sistema está disponível nos canais oficiais da Vendramini Informática, durante o horário comercial, para resolução de problemas, dúvidas e sugestões.</p>
                   </div>
                   
                   <div>
-                    <h3 className="font-semibold mb-2">7. Alterações nos Termos</h3>
+                    <h3 className="font-semibold mb-2">8. Alterações nos Termos</h3>
                     <p>Estes Termos de Uso podem ser alterados a qualquer momento. As alterações entrarão em vigor assim que publicadas nesta página. É responsabilidade do usuário revisar periodicamente este conteúdo.</p>
                   </div>
                   
                   <div>
-                    <h3 className="font-semibold mb-2">8. Aceitação dos Termos</h3>
+                    <h3 className="font-semibold mb-2">9. Aceitação dos Termos</h3>
                     <p>Ao continuar utilizando o ImobiFlow, você declara estar ciente e de acordo com os termos aqui descritos.</p>
                   </div>
                 </div>

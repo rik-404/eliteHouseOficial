@@ -23,7 +23,7 @@ interface ClientAppointmentHistoryProps {
   clientId: string;
 }
 
-export const ClientAppointmentHistory: React.FC<ClientAppointmentHistoryProps> = ({ clientId }) => {
+const ClientAppointmentHistory: React.FC<ClientAppointmentHistoryProps> = ({ clientId }) => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

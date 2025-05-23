@@ -13,8 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScheduleAppointmentDialog } from '@/components/scheduling/ScheduleAppointmentDialog';
-import { ClientDocuments } from '@/components/client/ClientDocuments';
-import { ClientAppointmentHistory } from '@/components/client/ClientAppointmentHistory';
+import ClientDocuments from '@/components/client/ClientDocuments';
+import ClientAppointmentHistory from '@/components/client/ClientAppointmentHistory';
 
 interface ViaCEPResponse {
   cep: string;

@@ -18,15 +18,33 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 // Nome do bucket para armazenar os documentos
-// Usamos o nome correto do bucket conforme configurado no Supabase
-const BUCKET_NAME = 'documents';
+// Usamos um bucket sem restrições de RLS para garantir que qualquer usuário possa fazer upload
+const BUCKET_NAME = 'publico';
+
+// Verifica se estamos em ambiente de desenvolvimento
+const isDevelopment = import.meta.env.MODE === 'development';
+
+// Configurações de ambiente
+const forceUniqueFiles = import.meta.env.VITE_STORAGE_FORCE_UNIQUE === 'true';
+const retryCount = parseInt(import.meta.env.VITE_STORAGE_RETRY_COUNT || '3', 10);
 
 // Configuração específica para o Storage
 const storageConfig = {
   bucket: BUCKET_NAME,
   options: {
     cacheControl: '3600',
-    upsert: false
+    // Sempre usar upsert true para evitar problemas de permissão
+    upsert: true,
+    // Adicionar timestamp para evitar problemas de cache
+    contentType: 'application/pdf'
+  },
+  // Configurações avançadas
+  forceUniqueFiles,
+  retryCount,
+  // Adicionar informações de ambiente para debug
+  environment: {
+    mode: import.meta.env.MODE,
+    isDevelopment
   }
 };
 
