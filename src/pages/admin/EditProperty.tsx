@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { Pencil } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -29,7 +30,9 @@ const EditProperty = () => {
     price: '',
     description: '',
     image_url: '',
-    featured: false
+    featured: false,
+    status: true,
+    vendido: false
   });
   const [loading, setLoading] = useState(true);
 
@@ -110,7 +113,9 @@ const EditProperty = () => {
           price: parseFloat(property.price),
           description: property.description,
           image_url: property.image_url,
-          featured: property.featured
+          featured: property.featured,
+          status: property.status,
+          vendido: property.vendido
         })
         .eq('id', id);
 
@@ -311,6 +316,36 @@ const EditProperty = () => {
                 <Label htmlFor="property-featured">Sim</Label>
               </div>
             )}
+          </div>
+          
+          <div className="admin-form-group">
+            <div className="flex justify-between items-center">
+              <div>
+                <Label htmlFor="property-status">Status</Label>
+                <div className="text-sm text-gray-500">(Imóveis inativos não aparecem no site)</div>
+              </div>
+              <Switch
+                id="property-status"
+                checked={property.status}
+                onCheckedChange={(checked) => setProperty({...property, status: checked})}
+                className={`${property.status ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
+              />
+            </div>
+          </div>
+          
+          <div className="admin-form-group">
+            <Label htmlFor="property-vendido">Situação</Label>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="property-vendido"
+                name="vendido"
+                checked={property.vendido}
+                onChange={handleCheckboxChange}
+              />
+              <Label htmlFor="property-vendido">Vendido</Label>
+              <span className="text-sm text-gray-500 ml-2">(Imóveis vendidos não aparecem no site)</span>
+            </div>
           </div>
         </div>
 

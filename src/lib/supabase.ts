@@ -18,7 +18,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 // Nome do bucket para armazenar os documentos
-// Usamos o nome correto do bucket
+// Usamos o nome correto do bucket conforme configurado no Supabase
 const BUCKET_NAME = 'documents';
 
 // Configuração específica para o Storage

@@ -20,6 +20,8 @@ const FeaturedProperties = () => {
           .from('properties')
           .select('*')
           .eq('featured', true)
+          .eq('status', true)
+          .eq('vendido', false)
           .order('created_at', { ascending: false });
 
         if (error) throw error;

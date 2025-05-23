@@ -22,7 +22,9 @@ const PropertySearch = () => {
         const { data, error } = await supabase
           .from('properties')
           .select('location')
-          .order('location', { ascending: true });
+          .eq('status', true)
+          .eq('vendido', false)
+          .order('location', { ascending: true});
 
         if (error) throw error;
         
@@ -40,7 +42,9 @@ const PropertySearch = () => {
         const { data, error } = await supabase
           .from('properties')
           .select('type')
-          .order('type', { ascending: true });
+          .eq('status', true)
+          .eq('vendido', false)
+          .order('type', { ascending: true});
 
         if (error) throw error;
         

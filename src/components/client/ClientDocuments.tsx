@@ -11,6 +11,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 
+// Definir os tipos de documento exatamente como estão no banco de dados
+// Importante: os valores devem corresponder exatamente aos valores aceitos pelo enum no banco de dados
 const DOCUMENT_TYPES: { value: DocumentType; label: string }[] = [
   { value: 'CERTIDAO_ESTADO_CIVIL', label: 'Certidão de Estado Civil' },
   { value: 'COMPROVANTE_RESIDENCIA', label: 'Comprovante de Residência' },
@@ -41,6 +43,29 @@ export const ClientDocuments: React.FC<ClientDocumentsProps> = ({ clientId }) =>
 
   useEffect(() => {
     fetchDocuments();
+    
+    // Configurar escuta em tempo real para documentos de clientes
+    const channel = supabase
+      .channel('client-documents-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'client_documents',
+          filter: `client_id=eq.${clientId}`
+        },
+        (payload) => {
+          console.log('Mudança detectada nos documentos do cliente:', payload);
+          fetchDocuments(); // Atualiza a lista de documentos automaticamente
+        }
+      )
+      .subscribe();
+
+    // Limpar a escuta quando o componente for desmontado
+    return () => {
+      channel.unsubscribe();
+    };
   }, [clientId]);
 
   const fetchDocuments = async () => {
@@ -82,10 +107,16 @@ export const ClientDocuments: React.FC<ClientDocumentsProps> = ({ clientId }) =>
     try {
       setUploading(true);
       
-      // Verificar se o arquivo é válido
-      const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+      // Verificar se o arquivo é válido - apenas PDF permitido
+      const validTypes = ['application/pdf'];
       if (!validTypes.includes(selectedFile.type)) {
-        throw new Error('Tipo de arquivo não suportado. Use PDF, JPG ou PNG.');
+        throw new Error('Apenas arquivos PDF são permitidos. Por favor, selecione um arquivo PDF.');
+      }
+      
+      // Verificar a extensão do arquivo para garantir que é PDF
+      const fileExtension = selectedFile.name.split('.').pop()?.toLowerCase();
+      if (fileExtension !== 'pdf') {
+        throw new Error('Apenas arquivos com extensão .pdf são permitidos.');
       }
       
       // Criar caminho único para o arquivo
@@ -114,11 +145,12 @@ export const ClientDocuments: React.FC<ClientDocumentsProps> = ({ clientId }) =>
       console.log('Iniciando upload real para o Supabase Storage');
       
       // Gerar um nome de arquivo único baseado no timestamp e nome original
-      const fileExt = selectedFile.name.split('.').pop()?.toLowerCase() || 'pdf';
-      const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}.${fileExt}`;
+      // Já sabemos que é um PDF pela validação anterior
+      const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}.pdf`;
       
       // Caminho completo do arquivo no Storage
-      const storagePath = `client-documents/${clientId}/${uniqueFileName}`;
+      // Removendo o prefixo 'client-documents/' para evitar erro 400
+      const storagePath = `${clientId}/${uniqueFileName}`;
       
       // Fazer o upload real para o Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
@@ -132,8 +164,74 @@ export const ClientDocuments: React.FC<ClientDocumentsProps> = ({ clientId }) =>
       
       if (uploadError) {
         console.error('Erro no upload do arquivo:', uploadError);
-        toast.error(`Erro no upload: ${uploadError.message}`, { duration: 5000 });
-        throw uploadError;
+        try {
+          // Tenta converter o erro para string JSON apenas se for um objeto válido
+          if (uploadError && typeof uploadError === 'object') {
+            console.error('Detalhes do erro:', JSON.stringify(uploadError, null, 2));
+          } else {
+            console.error('Detalhes do erro (não é um objeto JSON válido):', uploadError);
+          }
+        } catch (jsonError) {
+          console.error('Erro ao converter detalhes para JSON:', uploadError);
+        }
+        console.error('Caminho tentado:', storagePath);
+        console.error('Bucket usado:', storageConfig.bucket);
+        
+        toast.error(`Erro no upload: ${uploadError.message || 'Erro desconhecido'}`, { duration: 5000 });
+        
+        // Tentar novamente com um caminho ainda mais simples
+        console.log('Tentando upload com caminho alternativo...');
+        
+        // Garantir que estamos usando um tipo de documento válido
+        const docType = documentType || 'OUTROS';
+        
+        const alternativePath = `docs/${Date.now()}-${Math.random().toString(36).substring(2, 7)}.pdf`;
+        
+        const { data: retryData, error: retryError } = await supabase.storage
+          .from(storageConfig.bucket)
+          .upload(alternativePath, selectedFile, {
+            cacheControl: '3600',
+            upsert: true
+          });
+          
+        if (retryError) {
+          console.error('Falha na segunda tentativa:', retryError);
+          throw uploadError; // Lançar o erro original para manter a consistência
+        } else {
+          console.log('Segunda tentativa bem-sucedida:', retryData);
+          
+          // Obter a URL pública do arquivo no caminho alternativo
+          const { data: altUrlData } = await supabase.storage
+            .from(storageConfig.bucket)
+            .getPublicUrl(alternativePath);
+          
+          // Salvar metadados com o novo caminho
+          const { data: docData, error: docError } = await supabase
+            .from('client_documents')
+            .insert([{
+              client_id: clientId,
+              document_type: docType,
+              file_name: selectedFile.name,
+              file_url: altUrlData.publicUrl,
+              file_path: alternativePath,
+              file_size: selectedFile.size,
+              file_type: selectedFile.type,
+              description: description || null,
+            }])
+            .select();
+          
+          if (docError) {
+            console.error('Erro ao salvar metadados com caminho alternativo:', docError);
+            throw docError;
+          }
+          
+          toast.success('Documento enviado com sucesso!');
+          setSelectedFile(null);
+          setDescription('');
+          setDocumentType('OUTROS');
+          setUploading(false);
+          return;
+        }
       }
 
       if (!uploadData) {
@@ -152,25 +250,82 @@ export const ClientDocuments: React.FC<ClientDocumentsProps> = ({ clientId }) =>
 
       console.log('Salvando metadados no banco de dados...');
       
+      // Verificar o tipo de documento antes de salvar
+      console.log('Tipo de documento a ser salvo:', documentType);
+      
+      // Garantir que o tipo de documento seja válido
+      // Converter para minúsculas para evitar problemas de case-sensitivity
+      let safeDocumentType = documentType;
+      
+      // Verificar se o tipo está na lista de tipos válidos
+      const isValidType = DOCUMENT_TYPES.some(type => type.value === documentType);
+      
+      // Se não for válido, usar 'OUTROS'
+      if (!isValidType) {
+        console.warn(`Tipo de documento inválido: ${documentType}. Usando 'OUTROS' como fallback.`);
+        safeDocumentType = 'OUTROS';
+      }
+      
+      console.log('Tipo original:', documentType);
+      console.log('Tipo seguro a ser usado:', safeDocumentType);
+      
+      // Preparar dados para inserção
+      const documentData = {
+        client_id: clientId,
+        document_type: safeDocumentType,
+        file_name: selectedFile.name,
+        file_url: urlData.publicUrl, // URL pública do Supabase
+        file_path: storagePath, // Caminho real no Supabase Storage
+        file_size: selectedFile.size,
+        file_type: selectedFile.type,
+        description: description || null,
+      };
+      
+      console.log('Dados do documento a serem inseridos:', documentData);
+      
       // 3. Salvar metadados no banco de dados
       const { data, error: dbError } = await supabase
         .from('client_documents')
-        .insert([
-          {
-            client_id: clientId,
-            document_type: documentType,
-            file_name: selectedFile.name,
-            file_url: urlData.publicUrl, // URL pública do Supabase
-            file_path: storagePath, // Caminho real no Supabase Storage
-            file_size: selectedFile.size,
-            file_type: selectedFile.type,
-            description: description || null,
-          },
-        ])
+        .insert([documentData])
         .select();
 
       if (dbError) {
         console.error('Erro ao salvar metadados:', dbError);
+        console.error('Detalhes do erro:', JSON.stringify(dbError, null, 2));
+        
+        // Verificar se o erro está relacionado ao tipo de documento
+        if (dbError.message && dbError.message.includes('document_type')) {
+          toast.error(`Erro no tipo de documento: ${dbError.message}`);
+          console.error('Erro no tipo de documento. Tentando novamente com tipo "OUTROS"...');
+          
+          // Tentar novamente com o tipo OUTROS
+          const fallbackData = {
+            ...documentData,
+            document_type: 'OUTROS'
+          };
+          
+          console.log('Tentando novamente com:', fallbackData);
+          
+          const { data: retryData, error: retryError } = await supabase
+            .from('client_documents')
+            .insert([fallbackData])
+            .select();
+            
+          if (retryError) {
+            console.error('Falha na segunda tentativa:', retryError);
+            toast.error(`Falha ao salvar documento: ${retryError.message}`);
+          } else {
+            console.log('Segunda tentativa bem-sucedida:', retryData);
+            toast.success('Documento enviado com sucesso!');
+            setSelectedFile(null);
+            setDescription('');
+            setDocumentType('OUTROS');
+            return;
+          }
+        } else {
+          toast.error(`Falha ao salvar metadados: ${dbError.message || 'Erro desconhecido'}`);
+        }
+        
         throw new Error(`Falha ao salvar metadados: ${dbError.message}`);
       }
 
@@ -263,19 +418,65 @@ export const ClientDocuments: React.FC<ClientDocumentsProps> = ({ clientId }) =>
           } else {
             // É um arquivo no Supabase Storage
             // Tentar baixar o arquivo do Supabase
-            const { data, error } = await supabase.storage
-              .from(storageConfig.bucket)
-              .download(doc.file_path);
-              
-            if (error) {
-              console.error('Erro ao baixar arquivo:', doc.file_name, error);
-              return;
-            }
+            console.log('Tentando baixar arquivo:', doc.file_path);
             
-            if (data) {
-              // Adicionar o arquivo ao ZIP com um nome legível
-              const safeFileName = `${doc.document_type}_${doc.file_name}`;
-              zip.file(safeFileName, data);
+            try {
+              // Tentar baixar usando o caminho armazenado
+              const { data, error } = await supabase.storage
+                .from(storageConfig.bucket)
+                .download(doc.file_path);
+                
+              if (error) {
+                console.error('Erro ao baixar arquivo com caminho original:', doc.file_name, error);
+                throw error; // Forçar a tentativa alternativa
+              }
+              
+              if (data) {
+                // Adicionar o arquivo ao ZIP com um nome legível
+                const safeFileName = `${doc.document_type}_${doc.file_name}`;
+                zip.file(safeFileName, data);
+                return true;
+              }
+              return false;
+            } catch (downloadError) {
+              console.warn('Tentando caminho alternativo para download...');
+              
+              // Extrair o nome do arquivo do caminho ou da URL
+              const fileName = doc.file_path.split('/').pop() || doc.file_name;
+              
+              // Tentar diferentes formatos de caminho
+              const possiblePaths = [
+                doc.file_path,
+                `${clientId}/${fileName}`,
+                `docs/${fileName}`,
+                fileName
+              ];
+              
+              // Tentar cada caminho possível
+              for (const path of possiblePaths) {
+                try {
+                  console.log('Tentando caminho alternativo:', path);
+                  const { data: altData, error } = await supabase.storage
+                    .from(storageConfig.bucket)
+                    .download(path);
+                    
+                  if (!error && altData) {
+                    console.log('Download bem-sucedido com caminho alternativo:', path);
+                    // Adicionar o arquivo ao ZIP com um nome legível
+                    const safeFileName = `${doc.document_type}_${doc.file_name}`;
+                    zip.file(safeFileName, altData);
+                    return true;
+                  }
+                } catch (e) {
+                  console.warn(`Falha no caminho ${path}:`, e);
+                  // Continuar tentando outros caminhos
+                }
+              }
+              
+              // Se chegou aqui, todas as tentativas falharam
+              console.error('Todas as tentativas de download falharam para:', doc.file_name);
+              toast.error(`Não foi possível baixar: ${doc.file_name}`);
+              return false;
             }
           }
         } catch (error) {
@@ -342,7 +543,10 @@ export const ClientDocuments: React.FC<ClientDocumentsProps> = ({ clientId }) =>
             <Label htmlFor="documentType">Tipo de Documento</Label>
             <Select 
               value={documentType} 
-              onValueChange={(value: DocumentType) => setDocumentType(value)}
+              onValueChange={(value: DocumentType) => {
+                console.log('Tipo de documento selecionado:', value);
+                setDocumentType(value);
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o tipo" />
@@ -357,12 +561,12 @@ export const ClientDocuments: React.FC<ClientDocumentsProps> = ({ clientId }) =>
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="file">Arquivo (PDF, JPG, PNG)</Label>
+            <Label htmlFor="file">Arquivo (Apenas PDF)</Label>
             <Input 
               id="file" 
               type="file" 
               onChange={handleFileChange} 
-              accept=".pdf,.jpg,.jpeg,.png"
+              accept=".pdf"
             />
           </div>
           <div className="space-y-2">

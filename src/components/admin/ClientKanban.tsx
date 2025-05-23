@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Pencil } from 'lucide-react';
+import { Pencil, Trash2, AlertCircle, Clock, MoreHorizontal, Calendar, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Draggable, Droppable, DragDropContext } from 'react-beautiful-dnd';
 import ClientProfileModal from './ClientProfileModal';
@@ -159,8 +159,8 @@ const ClientKanban: React.FC<ClientKanbanProps> = ({ clients, updateClientStatus
                                   navigate(`/admin/clients/${client.id}/edit`);
                                 }}
                               >
-                                <Pencil className="w-4 h-4 mr-2" />
-                                Editar
+                                <User className="w-4 h-4 mr-2" />
+                                Perfil
                               </Button>
                             </div>
                           </div>

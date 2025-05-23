@@ -51,6 +51,8 @@ const Properties: React.FC = () => {
         const { data, error } = await supabase
           .from('properties')
           .select('location')
+          .eq('status', true)
+          .eq('vendido', false)
           .order('location', { ascending: true });
 
         if (error) throw error;
@@ -108,6 +110,8 @@ const Properties: React.FC = () => {
         const { data: propertiesData, error: propertiesError } = await supabase
           .from('properties')
           .select('*')
+          .eq('status', true)
+          .eq('vendido', false)
           .order('created_at', { ascending: false });
 
         if (propertiesError) throw propertiesError;

@@ -30,6 +30,24 @@ const PropertyDetails = () => {
 
         if (error) throw error;
         
+        // Verificar se o imóvel está ativo e não está vendido
+        if (data.status === false || data.vendido === true) {
+          let mensagem = "Este imóvel não está mais disponível.";
+          
+          if (data.vendido === true) {
+            mensagem = "Este imóvel já foi vendido.";
+          }
+          
+          toast({
+            title: "Imóvel indisponível",
+            description: mensagem,
+            variant: "destructive"
+          });
+          // Redirecionar para a página de imóveis
+          window.location.href = '/properties';
+          return;
+        }
+        
         setProperty(data);
       } catch (error) {
         console.error('Erro ao carregar imóvel:', error);

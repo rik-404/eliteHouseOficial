@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, SquareKanban, List, Pencil, Trash, Plus } from 'lucide-react';
+import { Search, SquareKanban, List, User, Trash, Plus } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/TempAuthContext';
 import { Client } from '../../types/client';
@@ -828,8 +828,8 @@ const Clients = () => {
                                      handleEditClient(client.id);
                                    }}
                                  >
-                                   <Pencil className="w-4 h-4 mr-2" />
-                                   Editar
+                                   <User className="w-4 h-4 mr-2" />
+                                   Perfil
                                  </Button>
                                  <Button
                                    variant="destructive"

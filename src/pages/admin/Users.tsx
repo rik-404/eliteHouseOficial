@@ -25,6 +25,28 @@ const Users = () => {
 
   useEffect(() => {
     fetchUsers();
+    
+    // Configurar escuta em tempo real para a tabela de usuários
+    const channel = supabase
+      .channel('users-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'users',
+        },
+        (payload) => {
+          console.log('Mudança detectada na tabela users:', payload);
+          fetchUsers(); // Atualiza a lista de usuários automaticamente
+        }
+      )
+      .subscribe();
+
+    // Limpar a escuta quando o componente for desmontado
+    return () => {
+      channel.unsubscribe();
+    };
   }, []);
 
   const fetchUsers = async () => {

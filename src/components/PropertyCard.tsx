@@ -19,6 +19,9 @@ export type PropertyType = {
   image_url: string;
   type: 'Apartamento' | 'Casa' | 'Cobertura' | 'Terreno';
   featured?: boolean;
+  description?: string;
+  status?: boolean;
+  vendido?: boolean;
 };
 
 interface PropertyCardProps {

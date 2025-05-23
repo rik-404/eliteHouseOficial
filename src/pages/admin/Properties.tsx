@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
 
 export const Properties = () => {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ export const Properties = () => {
   const [locationFilter, setLocationFilter] = useState('Todos');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [vendidoFilter, setVendidoFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [propertyToDelete, setPropertyToDelete] = useState<{ id: string; title: string } | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -39,6 +41,7 @@ export const Properties = () => {
         if (error) throw error;
         const propertiesData = data || [];
         setProperties(propertiesData);
+      
 
         // Extrair localizações únicas
         const locationsSet = new Set<string>(propertiesData.map(property => property.location));
@@ -57,20 +60,100 @@ export const Properties = () => {
     };
 
     loadProperties();
+    
+    // Configurar escuta em tempo real para a tabela de propriedades
+    const channel = supabase
+      .channel('properties-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'properties',
+        },
+        (payload) => {
+          console.log('Mudança detectada na tabela properties:', payload);
+          loadProperties(); // Atualiza a lista de propriedades automaticamente
+        }
+      )
+      .subscribe();
+
+    // Limpar a escuta quando o componente for desmontado
+    return () => {
+      channel.unsubscribe();
+    };
   }, [toast]);
 
-  const handleDelete = async (id: string) => {
-    if (user?.role === 'corretor') {
+  const handleToggleStatus = async (id: string, status: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .update({ status })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Atualizar a lista local
+      setProperties(properties.map(property => {
+        if (property.id === id) {
+          return { ...property, status };
+        }
+        return property;
+      }));
+
       toast({
-        title: "Acesso negado",
-        description: "Corretores não têm permissão para excluir imóveis",
+        title: "Sucesso",
+        description: `Status do imóvel alterado para ${status ? 'ativo' : 'inativo'}`
+      });
+    } catch (error) {
+      console.error('Erro ao alterar status do imóvel:', error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao alterar o status do imóvel",
         variant: "destructive"
       });
-      return;
     }
+  };
 
+  const handleToggleVendido = async (id: string, vendido: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('properties')
+        .update({ vendido })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Atualizar a lista local
+      setProperties(properties.map(property => {
+        if (property.id === id) {
+          return { ...property, vendido };
+        }
+        return property;
+      }));
+
+      toast({
+        title: "Sucesso",
+        description: `Imóvel marcado como ${vendido ? 'vendido' : 'disponível'}`
+      });
+    } catch (error) {
+      console.error('Erro ao alterar situação do imóvel:', error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao alterar a situação do imóvel",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDelete = async (id: string) => {
     const property = properties.find(p => p.id === id);
-    setPropertyToDelete(property);
+    if (!property) return;
+    
+    setPropertyToDelete({
+      id,
+      title: property.title
+    });
     setDeleteDialogOpen(true);
   };
 
@@ -109,7 +192,7 @@ export const Properties = () => {
 
   const filteredProperties = properties.filter(property => {
     // Se não houver nenhum filtro ativo, mostra todos os imóveis
-    if (!searchTerm && (locationFilter === 'Todos' || !locationFilter) && typeFilter === 'all') {
+    if (!searchTerm && (locationFilter === 'Todos' || !locationFilter) && typeFilter === 'all' && statusFilter === 'all') {
       return true;
     }
 
@@ -118,8 +201,15 @@ export const Properties = () => {
     const matchesLocation = locationFilter === 'Todos' || 
                           property.location.toLowerCase().includes(locationFilter.toLowerCase());
     const matchesType = typeFilter === 'all' || property.type.toLowerCase() === typeFilter.toLowerCase();
+    const matchesStatus = statusFilter === 'all' || 
+                         (statusFilter === 'active' && property.status === true) || 
+                         (statusFilter === 'inactive' && property.status === false);
+                         
+    const matchesVendido = vendidoFilter === 'all' ||
+                         (vendidoFilter === 'vendido' && property.vendido === true) ||
+                         (vendidoFilter === 'disponivel' && property.vendido === false);
     
-    return matchesSearch && matchesLocation && matchesType;
+    return matchesSearch && matchesLocation && matchesType && matchesStatus && matchesVendido;
   });
 
   return (
@@ -182,6 +272,38 @@ export const Properties = () => {
               </SelectContent>
             </Select>
           </div>
+          <div className="flex-1">
+            <Label htmlFor="status">Status</Label>
+            <Select
+              value={statusFilter}
+              onValueChange={(value) => setStatusFilter(value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Filtrar por status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="active">Ativos</SelectItem>
+                <SelectItem value="inactive">Inativos</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex-1">
+            <Label htmlFor="vendido">Situação</Label>
+            <Select
+              value={vendidoFilter}
+              onValueChange={(value) => setVendidoFilter(value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Filtrar por situação" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="disponivel">Disponíveis</SelectItem>
+                <SelectItem value="vendido">Vendidos</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm overflow-x-auto p-4 md:p-6 relative">
@@ -198,6 +320,8 @@ export const Properties = () => {
                 <TableHead className="w-1/12">Garagem</TableHead>
                 <TableHead className="w-1/12">Preço</TableHead>
                 <TableHead className="w-1/12">Destaque</TableHead>
+                <TableHead className="w-1/12">Status</TableHead>
+                <TableHead className="w-1/12">Situação</TableHead>
                 <TableHead className="w-1/12">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -231,6 +355,22 @@ export const Properties = () => {
                         property.featured ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                       }`}>
                         {property.featured ? 'Sim' : 'Não'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-between">
+                        <Switch
+                          checked={property.status}
+                          onCheckedChange={(checked) => handleToggleStatus(property.id, checked)}
+                          className={`${property.status ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        property.vendido ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {property.vendido ? 'Vendido' : 'Disponível'}
                       </span>
                     </TableCell>
                     <TableCell>

@@ -48,16 +48,16 @@ export const NewClient = () => {
   const initialClient: Client = {
     id: '',
     name: '',
-    email: undefined,
+    email: '',
     phone: '',
     cpf: '',
-    cep: undefined,
-    street: undefined,
-    number: undefined,
-    neighborhood: undefined,
-    city: undefined,
-    state: undefined,
-    complement: undefined,
+    cep: '',
+    street: '',
+    number: '',
+    neighborhood: '',
+    city: '',
+    state: '',
+    complement: '',
     origin: '',
     broker_id: user?.role === 'corretor' ? user.broker_id : '',
     status: 'Novo' as ClientStatus,
@@ -159,46 +159,78 @@ export const NewClient = () => {
       };
 
       // Verifica se o broker_id é um UUID válido
-      if (!clientData.broker_id) {
-        throw new Error('Por favor, selecione um corretor');
-      }
-
-      if (!clientData.broker_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-        throw new Error('Por favor, selecione um corretor válido');
-      }
-
-      // Adiciona o broker_id só se for válido
-      clientData.broker_id = client.broker_id;
-
-      const { data, error } = await supabase
-        .from('clients')
-        .insert([{
-          ...clientData,
-          broker_id: client.broker_id,
-          origin: client.origin || null,
-          scheduling: 'Aguardando' // Garante que o agendamento seja definido como 'Aguardando'
-        }])
-        .select()
-        .single();
-
-      if (error) {
-        if (error.code === '23505') { // Código de erro do PostgreSQL para violação de unicidade
-          // Verifica se o erro é sobre email ou CPF
-          if (error.message.includes('clients_email_key')) {
-            setError('Email já cadastrado. Por favor, use um email diferente.');
-          } else if (error.message.includes('clients_cpf_key')) {
-            setError('CPF já cadastrado. Por favor, use um CPF diferente.');
-          } else {
-            setError('Erro ao criar cliente. Por favor, tente novamente.');
-          }
-        } else {
-          setError('Erro ao criar cliente. Por favor, tente novamente.');
+      if (user?.role === 'corretor') {
+        // Se o usuário for corretor, usa o broker_id dele automaticamente
+        clientData.broker_id = user.broker_id;
+      } else {
+        // Para outros tipos de usuários, verifica se selecionou um corretor
+        if (!clientData.broker_id) {
+          throw new Error('Por favor, selecione um corretor');
         }
-        return;
+
+        if (!clientData.broker_id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+          throw new Error('Por favor, selecione um corretor válido');
+        }
       }
 
-      // Redireciona para a página de clientes após criar
-      navigate('/admin/clients');
+      // broker_id já foi validado e atribuído acima
+
+      // Criar um objeto simplificado para inserção
+      const insertData = {
+        name: client.name,
+        cpf: client.cpf,
+        email: client.email,
+        phone: client.phone,
+        cep: client.cep,
+        street: client.street,
+        number: client.number,
+        neighborhood: client.neighborhood,
+        city: client.city,
+        state: client.state,
+        complement: client.complement,
+        status: client.status,
+        notes: client.notes,
+        origin: client.origin,
+        scheduling: 'Aguardando',
+        broker_id: user?.role === 'corretor' ? user.broker_id : client.broker_id
+      };
+      
+      console.log('Dados do cliente a serem inseridos:', insertData);
+      
+      // Remover campos vazios para evitar problemas com o Supabase
+      Object.keys(insertData).forEach(key => {
+        // @ts-ignore
+        if (insertData[key] === '') {
+          // @ts-ignore
+          delete insertData[key];
+        }
+      });
+      
+      try {
+        const { data, error } = await supabase
+          .from('clients')
+          .insert([insertData])
+          .select();
+          
+        if (error) {
+          if (error.code === '23505') { // Código de erro do PostgreSQL para violação de unicidade
+            setError('Já existe um cliente com este CPF ou email');
+          } else {
+            console.error('Erro ao criar cliente:', error);
+            setError(`Erro ao criar cliente: ${error.message || 'Erro desconhecido'}`);
+          }
+          setLoading(false);
+          return;
+        }
+        
+        // Sucesso - redirecionar para a página de clientes
+        setLoading(false);
+        navigate('/admin/clients');
+      } catch (error: any) {
+        console.error('Erro inesperado ao criar cliente:', error);
+        setError(`Erro inesperado ao criar cliente: ${error.message || 'Erro desconhecido'}`);
+        setLoading(false);
+      }
     } catch (err) {
       console.error('Erro ao criar cliente:', err);
       if (err instanceof Error) {
