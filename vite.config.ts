@@ -53,6 +53,20 @@ export default defineConfig(({ mode }) => ({
           source: fs.readFileSync(path.resolve(__dirname, 'src/service-worker.js'), 'utf-8')
         });
       }
+    },
+    {
+      name: 'copy-htaccess',
+      generateBundle() {
+        // Verifica se o arquivo .htaccess existe na raiz do projeto
+        const htaccessPath = path.resolve(__dirname, '.htaccess');
+        if (fs.existsSync(htaccessPath)) {
+          this.emitFile({
+            type: 'asset',
+            fileName: '.htaccess',
+            source: fs.readFileSync(htaccessPath, 'utf-8')
+          });
+        }
+      }
     }
   ],
   resolve: {

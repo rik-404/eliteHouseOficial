@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, SquareKanban, List, User, Trash, Plus } from 'lucide-react';
+import { Search, SquareKanban, List, User, Trash, Plus, Bell } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/TempAuthContext';
 import { Client } from '../../types/client';
@@ -16,6 +16,7 @@ import ClientKanban from '@/components/admin/ClientKanban';
 import AssignBrokerModal from '@/components/admin/AssignBrokerModal';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { playNotificationSound } from '@/utils/notificationSound';
 
 
 const statusColors = {
@@ -50,6 +51,7 @@ const Clients = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
+  const previousPendingCountRef = useRef(0);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [assignBrokerOpen, setAssignBrokerOpen] = useState(false);
@@ -90,6 +92,12 @@ const Clients = () => {
         (payload) => {
           console.log('Change received!', payload);
           fetchClients();
+          
+          // Verifica se o evento é de inserção e o status é 'pending'
+          if (payload.eventType === 'INSERT' && payload.new?.status === 'pending') {
+            console.log('Novo cliente pendente detectado!');
+            playNotificationSound();
+          }
         }
       )
       .subscribe();
@@ -322,7 +330,18 @@ const Clients = () => {
         .from('clients')
         .select('id')
         .eq('status', 'pending');
-      setPendingCount(pendingData?.length || 0);
+      
+      const newPendingCount = pendingData?.length || 0;
+      
+      // Verifica se o número de pendentes aumentou desde a última verificação
+      if (newPendingCount > previousPendingCountRef.current && previousPendingCountRef.current > 0) {
+        console.log(`Número de pendentes aumentou de ${previousPendingCountRef.current} para ${newPendingCount}`);
+        playNotificationSound();
+      }
+      
+      // Atualiza o contador e a referência
+      setPendingCount(newPendingCount);
+      previousPendingCountRef.current = newPendingCount;
 
       // Iniciar a construção da query
       console.log('Construindo query para buscar clientes...');
@@ -361,9 +380,17 @@ const Clients = () => {
         // Não aplicamos filtro de corretor
       }
 
+      // Verificar se há um parâmetro de status na URL
+      const statusParam = searchParams.get('status');
+      
       // Aplicar filtro de status de agendamento
       const schedulingParam = searchParams.get('scheduling');
-      if (schedulingParam !== null) {
+      
+      // Verificar se estamos filtrando por um status específico
+      if (statusParam) {
+        console.log('Filtrando por status:', statusParam);
+        query = query.eq('status', statusParam);
+      } else if (schedulingParam !== null) {
         console.log('Aplicando filtro de agendamento (da URL):', schedulingParam);
         if (schedulingParam === '') {
           console.log('Buscando clientes sem status de agendamento');
@@ -375,8 +402,11 @@ const Clients = () => {
         }
       } else if (selectedStatus) {
         if (selectedStatus === 'all') {
-          console.log('Buscando todos os status (exceto pendentes)');
-          query = query.neq('status', 'pending');
+          console.log('Buscando todos os status (incluindo pendentes)');
+          // Não aplicar nenhum filtro de status para mostrar todos
+        } else if (selectedStatus === 'pending') {
+          console.log('Filtrando apenas clientes pendentes');
+          query = query.eq('status', 'pending');
         } else {
           // Verifica se o selectedStatus é um status de agendamento
           const isSchedulingStatus = ['Aguardando', 'Nao_Realizado', 'Realizado'].includes(selectedStatus);
@@ -388,6 +418,9 @@ const Clients = () => {
             query = query.eq('status', selectedStatus);
           }
         }
+      } else {
+        console.log('Nenhum filtro de status aplicado - mostrando todos os clientes');
+        // Não aplicar nenhum filtro de status para mostrar todos
       }
 
       // Aplicar filtro de origem da URL
@@ -472,8 +505,18 @@ const Clients = () => {
     let shouldUpdate = false;
     const brokerParam = searchParams.get('broker');
     const schedulingParam = searchParams.get('scheduling');
+    const statusParam = searchParams.get('status');
     
-    console.log('Parâmetros extraídos:', { brokerParam, schedulingParam });
+    console.log('Parâmetros extraídos:', { brokerParam, schedulingParam, statusParam });
+    
+    // Se tivermos um parâmetro de status na URL, atualizar o selectedStatus
+    if (statusParam) {
+      console.log('Definindo status para:', statusParam);
+      if (selectedStatus !== statusParam) {
+        setSelectedStatus(statusParam);
+        shouldUpdate = true;
+      }
+    }
 
     // Atualiza o broker se necessário
     if (brokerParam !== null) {
@@ -557,6 +600,23 @@ const Clients = () => {
     console.log('Total de clientes:', clients.length);
     console.log('Filtros ativos - selectedBroker:', selectedBroker, 'selectedStatus:', selectedStatus);
     
+    // Verificar se há um parâmetro de status na URL
+    const statusParam = searchParams.get('status');
+    
+    // Se estamos filtrando por um status específico da URL
+    if (statusParam) {
+      console.log(`Filtrando por status ${statusParam} no frontend`);
+      return clients.filter(client => {
+        // Se for corretor, filtra apenas os clientes dele com o status especificado
+        if (user?.role === 'corretor') {
+          return client.status === statusParam && client.broker_id === user.broker_id;
+        }
+        // Para admin, mostra todos os clientes com o status especificado
+        return client.status === statusParam;
+      });
+    }
+    
+    // Filtro normal para outros casos
     return clients.filter(client => {
       // Filtro de corretor
       const brokerMatch = !selectedBroker || selectedBroker === 'all' || client.broker_id === selectedBroker;
@@ -716,31 +776,34 @@ const Clients = () => {
               ))}
             </SelectContent>
           </Select>
+          
           {canViewPendentes(user) && (
             <div className="flex gap-2">
               <Button
                 variant="default"
                 className="bg-blue-500 hover:bg-blue-600 text-white"
-                onClick={() => setSelectedStatus('all')}
+                onClick={() => {
+                  setSelectedStatus(null);
+                  navigate('/admin/clients');
+                }}
               >
                 Todos
               </Button>
               <Button
                 variant="outline"
-                className="bg-gray-200 hover:bg-gray-300 text-gray-700 relative"
-                onClick={() => setSelectedStatus('pending')}
+                size="sm"
+                className={`${selectedStatus === 'pending' ? 'bg-yellow-600' : 'bg-yellow-400'} hover:bg-yellow-500 text-white border-none flex items-center gap-1`}
+                onClick={() => {
+                  setSelectedStatus('pending');
+                  navigate('/admin/clients?status=pending');
+                }}
                 disabled={isKanbanView}
               >
-                <span className="flex items-center gap-2">
-                  <span>Pendentes</span>
-                  <span className="ml-2 px-2 py-1 text-xs font-medium rounded-full bg-red-500 text-white">
-                    {pendingCount}
-                  </span>
-                </span>
+                <Bell className="w-4 h-4" />
+                Pendentes ({pendingCount})
               </Button>
             </div>
           )}
-
         </div>
       </div>
 

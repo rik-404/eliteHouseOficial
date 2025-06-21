@@ -262,11 +262,77 @@ const Dashboard = () => {
   const [funnelData, setFunnelData] = useState<{status: string, count: number}[]>([]);
   const [loadingFunnel, setLoadingFunnel] = useState(true);
   const [isFunnelMinimized, setIsFunnelMinimized] = useState(true);
+  
+  // Estado para armazenar os dados de clientes em análise
+  const [analysisData, setAnalysisData] = useState<{name: string, value: number}[]>([]);
+  const [loadingAnalysis, setLoadingAnalysis] = useState(true);
 
   // Função para lidar com o clique em um item do funil
   const handleFunnelClick = (status: string, count: number) => {
     console.log(`Clicou em ${status} com ${count} registros`);
     navigate(`/admin/clients?status=${encodeURIComponent(status)}`);
+  };
+  
+  // Função para lidar com o clique em uma fatia do gráfico de análise
+  const handleAnalysisClick = (data: any) => {
+    if (data && data.name) {
+      console.log(`Clicou em ${data.name} com ${data.value} registros`);
+      navigate(`/admin/clients?status=${encodeURIComponent(data.name)}`);
+    }
+  };
+  
+  // Função para buscar os dados de clientes em análise
+  const fetchAnalysisData = async () => {
+    try {
+      setLoadingAnalysis(true);
+      
+      // Status que queremos analisar
+      const analysisStatus = ['Análise documental', 'Análise bancária'];
+      
+      // Cria a query base para buscar clientes
+      let query = supabase
+        .from('clients')
+        .select('id, status, broker_id')
+        .in('status', analysisStatus);
+      
+      // Se for um corretor, filtra apenas os clientes dele
+      if (user?.role === 'corretor' && user?.broker_id) {
+        query = query.eq('broker_id', user.broker_id);
+      }
+      
+      const { data: clients, error } = await query;
+      
+      if (error) throw error;
+
+      // Conta quantos clientes existem por status
+      const statusCounts: Record<string, number> = {};
+      
+      // Inicializa todos os status com zero
+      analysisStatus.forEach(status => {
+        statusCounts[status] = 0;
+      });
+      
+      // Conta os clientes por status
+      clients?.forEach(client => {
+        if (client?.status && analysisStatus.includes(client.status)) {
+          statusCounts[client.status] = (statusCounts[client.status] || 0) + 1;
+        }
+      });
+
+      // Formata os dados para o componente
+      const formattedData = Object.entries(statusCounts).map(([name, value]) => ({
+        name,
+        value
+      }));
+
+      console.log('Dados de clientes em análise:', formattedData);
+      setAnalysisData(formattedData);
+    } catch (error) {
+      console.error('Erro ao buscar dados de clientes em análise:', error);
+      setAnalysisData([]);
+    } finally {
+      setLoadingAnalysis(false);
+    }
   };
 
   // Função para buscar os dados do funil de vendas
@@ -657,7 +723,8 @@ const Dashboard = () => {
           fetchSchedulingData(),
           fetchSalesData(),
           fetchUpcomingAppointments(),
-          fetchFunnelData()
+          fetchFunnelData(),
+          fetchAnalysisData()
         ]);
       } catch (error) {
         console.error('Erro ao carregar dados do dashboard:', error);
@@ -961,6 +1028,75 @@ const Dashboard = () => {
                     <Tooltip />
                     <Legend />
                   </PieChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+          
+          {/* Gráfico de Clientes em Análise */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <BarChart2 className="h-5 w-5" />
+                <CardTitle>
+                  Clientes em Análise
+                  {user?.role === 'corretor' && (
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                      (Seus clientes)
+                    </span>
+                  )}
+                </CardTitle>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Clientes em análise documental e bancária
+              </p>
+            </CardHeader>
+            <CardContent className="h-64">
+              {loadingAnalysis ? (
+                <div className="h-full flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : analysisData.length === 0 ? (
+                <div className="h-full flex items-center justify-center">
+                  <p className="text-muted-foreground text-sm">Nenhum cliente em análise</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={analysisData}
+                    margin={{
+                      top: 20,
+                      right: 30,
+                      left: 20,
+                      bottom: 5,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar 
+                      dataKey="value" 
+                      name="Quantidade" 
+                      fill="#8884d8" 
+                      onClick={handleAnalysisClick}
+                      cursor="pointer"
+                    >
+                      {analysisData.map((entry, index) => {
+                        // Define a cor com base no status
+                        let color = '#8884d8'; // Cor padrão para Análise documental
+                        if (entry.name === 'Análise bancária') color = '#82ca9d';
+                        
+                        return (
+                          <Cell 
+                            key={`analysis-cell-${index}`} 
+                            fill={color}
+                          />
+                        );
+                      })}
+                    </Bar>
+                  </BarChart>
                 </ResponsiveContainer>
               )}
             </CardContent>

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, AlertCircle, Clock, MoreHorizontal, Calendar, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Draggable, Droppable, DragDropContext } from 'react-beautiful-dnd';
-import ClientProfileModal from './ClientProfileModal';
+// Removido import do ClientProfileModal
 
 interface Client {
   id: string;
@@ -80,18 +80,8 @@ const ClientKanban: React.FC<ClientKanbanProps> = ({ clients, updateClientStatus
     return clients.filter(client => client.status === status);
   };
 
-  const [selectedClient, setSelectedClient] = React.useState<Client | null>(null);
-
   const handleEditClient = (clientId: string) => {
     navigate(`/admin/clients/${clientId}/edit`);
-  };
-
-  const handleViewProfile = (client: Client) => {
-    setSelectedClient(client);
-  };
-
-  const handleCloseProfile = () => {
-    setSelectedClient(null);
   };
 
   const renderStatusColumn = (status: string) => {
@@ -140,7 +130,7 @@ const ClientKanban: React.FC<ClientKanbanProps> = ({ clients, updateClientStatus
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
                             className="bg-white p-2 rounded-md shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                            onClick={() => handleViewProfile(client)}
+                            // Removido o comportamento de abrir o pop-up ao clicar
                           >
                             <div className="flex justify-between items-center">
                               <div>
@@ -206,14 +196,7 @@ const ClientKanban: React.FC<ClientKanbanProps> = ({ clients, updateClientStatus
     }
   };
 
-  if (selectedClient) {
-    return (
-      <ClientProfileModal
-        client={selectedClient}
-        onClose={handleCloseProfile}
-      />
-    );
-  }
+  // Removido o código que renderizava o modal de perfil do cliente
 
   if (loading) {
     return (

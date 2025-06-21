@@ -17,6 +17,7 @@ export type PropertyType = {
   area: number;
   garage?: number;
   image_url: string;
+  images?: string[];
   type: 'Apartamento' | 'Casa' | 'Cobertura' | 'Terreno';
   featured?: boolean;
   description?: string;

@@ -2,9 +2,11 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { format, parseISO, isToday, isTomorrow, isAfter, parse } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 import { ptBR } from 'date-fns/locale';
-import { Loader2, RefreshCw } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Loader2, RefreshCw, Plus } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -70,6 +72,13 @@ const UpcomingAppointments: React.FC = () => {
   const [rescheduleAppointment, setRescheduleAppointment] = useState<Appointment | null>(null);
   const [newAppointmentDate, setNewAppointmentDate] = useState<string>('');
   const [newAppointmentTime, setNewAppointmentTime] = useState<string>('');
+
+  const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
+
+  const handleNewTask = () => {
+    navigate('/admin/tasks/new');
+  };
 
   useEffect(() => {
     console.log('=== Iniciando busca do usuário atual ===');
@@ -142,9 +151,9 @@ const UpcomingAppointments: React.FC = () => {
           .or(`and(data.eq.${todayStr},hora.lt.${currentTime}),data.lt.${todayStr}`);
 
         // Se o usuário for um corretor, filtra apenas os agendamentos dele
-        if (user?.role === 'corretor' && user.broker_id) {
-          console.log('Filtrando agendamentos atrasados apenas para o corretor:', user.broker_id);
-          query = query.eq('broker_id', user.broker_id);
+        if (user?.role === 'corretor' && user.id) {
+          console.log('Filtrando agendamentos atrasados apenas para o corretor:', user.id);
+          query = query.eq('broker_id', user.id);
         }
 
         const { data: overdueData, error: overdueError } = await query
@@ -160,23 +169,67 @@ const UpcomingAppointments: React.FC = () => {
         }
 
         // Busca clientes e corretores para os agendamentos atrasados
-        const overdueClientIds = [...new Set(overdueData.map(item => item.client_id))];
-        const overdueBrokerIds = [...new Set(overdueData.map(item => item.broker_id))];
+        const overdueClientIds = [...new Set(overdueData
+          .map(item => item.client_id)
+          .filter((id): id is string => !!id && id !== 'null' && id !== 'undefined')
+        )];
+        
+        const overdueBrokerIds = [...new Set(overdueData
+          .map(item => item.broker_id)
+          .filter((id): id is string => !!id && id !== 'null' && id !== 'undefined')
+        )];
 
-        const [
-          { data: overdueClients, error: overdueClientsError },
-          { data: overdueBrokers, error: overdueBrokersError }
-        ] = await Promise.all([
-          supabase
+        console.log('IDs de clientes para buscar:', overdueClientIds);
+        console.log('IDs de corretores para buscar:', overdueBrokerIds);
+
+        // Inicializa as variáveis para os resultados
+        let overdueClients: any[] = [];
+        let overdueBrokers: any[] = [];
+        let overdueClientsError = null;
+        let overdueBrokersError = null;
+
+        // Só busca clientes se houver IDs válidos
+        if (overdueClientIds.length > 0) {
+          const { data, error } = await supabase
             .from('clients')
             .select('*')
-            .in('id', overdueClientIds),
-          supabase
-            .from('users')
-            .select('*')
-            .eq('role', 'corretor')
-            .in('broker_id', overdueBrokerIds)
-        ]);
+            .in('id', overdueClientIds);
+          
+          if (error) {
+            console.error('Erro ao buscar clientes atrasados:', error);
+            overdueClientsError = error;
+          } else {
+            overdueClients = data || [];
+          }
+        }
+
+        // Só busca corretores se houver IDs válidos
+        if (overdueBrokerIds.length > 0) {
+          console.log('Buscando corretores com broker_ids:', overdueBrokerIds);
+          try {
+            // Primeiro busca os usuários que são corretores
+            const { data: corretores, error } = await supabase
+              .from('users')
+              .select('*')
+              .eq('role', 'corretor');
+            
+            if (error) {
+              console.error('Erro ao buscar corretores atrasados:', error);
+              overdueBrokersError = error;
+            } else {
+              // Filtra os corretores cujo broker_id está na lista de IDs
+              const corretoresFiltrados = corretores.filter(corretor => 
+                overdueBrokerIds.includes(corretor.broker_id)
+              );
+              
+              console.log('Corretores encontrados:', corretoresFiltrados);
+              overdueBrokers = corretoresFiltrados;
+            }
+          } catch (err) {
+            console.error('Exceção ao buscar corretores:', err);
+            overdueBrokersError = err;
+          }
+        }
 
         if (overdueClientsError || overdueBrokersError) {
           console.error('Erro ao buscar dados para agendamentos atrasados:', { overdueClientsError, overdueBrokersError });
@@ -186,7 +239,14 @@ const UpcomingAppointments: React.FC = () => {
         // Mapeia os agendamentos atrasados com seus respectivos clientes e corretores
         const formattedOverdueAppointments = overdueData.map(appointment => {
           const client = overdueClients?.find(c => c.id === appointment.client_id);
+          // Busca o corretor pelo broker_id do agendamento
           const broker = overdueBrokers?.find(b => b.broker_id === appointment.broker_id);
+
+          console.log('Mapeando agendamento:', {
+            appointmentId: appointment.id,
+            appointmentBrokerId: appointment.broker_id,
+            foundBroker: broker
+          });
 
           return {
             ...appointment,
@@ -215,9 +275,9 @@ const UpcomingAppointments: React.FC = () => {
           .lte('data', nextWeek.toISOString().split('T')[0]);
 
         // Se o usuário for um corretor, filtra apenas os agendamentos dele
-        if (user?.role === 'corretor' && user.broker_id) {
-          console.log('Filtrando agendamentos futuros apenas para o corretor:', user.broker_id);
-          queryUpcoming = queryUpcoming.eq('broker_id', user.broker_id);
+        if (user?.role === 'corretor' && user.id) {
+          console.log('Filtrando agendamentos futuros apenas para o corretor:', user.id);
+          queryUpcoming = queryUpcoming.eq('broker_id', user.id);
         }
 
         const { data: schedulingData, error: schedulingError } = await queryUpcoming
@@ -234,52 +294,60 @@ const UpcomingAppointments: React.FC = () => {
 
         const clientIds = [...new Set(schedulingData
           .map(item => item.client_id)
-          .filter((id): id is string => {
-            const isValid = !!id && id !== 'null' && id !== 'undefined';
-            if (!isValid) {
-              console.log('ID de cliente inválido filtrado:', id);
-            }
-            return isValid;
-          })
+          .filter((id): id is string => !!id && id !== 'null' && id !== 'undefined')
         )];
 
         const brokerIds = [...new Set(schedulingData
-          .map(item => {
-            console.log('Broker ID no agendamento:', item.broker_id, 'Tipo:', typeof item.broker_id);
-            return item.broker_id;
-          })
-          .filter((id): id is string => {
-            const isValid = !!id && id !== 'null' && id !== 'undefined';
-            if (!isValid) {
-              console.log('ID de corretor inválido filtrado:', id);
-            }
-            return isValid;
-          })
+          .map(item => item.broker_id)
+          .filter((id): id is string => !!id && id !== 'null' && id !== 'undefined')
         )];
 
-        console.log('IDs de corretores para buscar:', brokerIds);
+        console.log('IDs de clientes para buscar (próximos):', clientIds);
+        console.log('IDs de corretores para buscar (próximos):', brokerIds);
 
-        // Busca clientes
-        const { data: clients, error: clientsError } = await supabase
-          .from('clients')
-          .select('*')
-          .in('id', clientIds);
-        
-        if (clientsError) {
-          console.error('Erro ao buscar clientes:', clientsError);
-          throw clientsError;
+        // Inicializa as variáveis para os resultados
+        let clients: any[] = [];
+        let brokers: any[] = [];
+
+        // Só busca clientes se houver IDs válidos
+        if (clientIds.length > 0) {
+          const { data, error } = await supabase
+            .from('clients')
+            .select('*')
+            .in('id', clientIds);
+          
+          if (error) {
+            console.error('Erro ao buscar clientes (próximos):', error);
+          } else {
+            clients = data || [];
+          }
         }
 
-        // Busca corretores
-        const { data: brokers, error: brokersError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('role', 'corretor')
-          .in('broker_id', brokerIds);
-        
-        if (brokersError) {
-          console.error('Erro ao buscar corretores:', brokersError);
-          throw brokersError;
+
+        // Só busca corretores se houver IDs válidos
+        if (brokerIds.length > 0) {
+          console.log('Buscando corretores (próximos) com broker_ids:', brokerIds);
+          try {
+            // Primeiro busca todos os corretores
+            const { data: corretores, error } = await supabase
+              .from('users')
+              .select('*')
+              .eq('role', 'corretor');
+            
+            if (error) {
+              console.error('Erro ao buscar corretores (próximos):', error);
+            } else {
+              // Filtra os corretores cujo broker_id está na lista de IDs
+              const corretoresFiltrados = corretores.filter(corretor => 
+                brokerIds.includes(corretor.broker_id)
+              );
+              
+              console.log('Corretores (próximos) encontrados:', corretoresFiltrados);
+              brokers = corretoresFiltrados;
+            }
+          } catch (err) {
+            console.error('Exceção ao buscar corretores (próximos):', err);
+          }
         }
 
         console.log('Clientes encontrados:', clients);
@@ -287,7 +355,7 @@ const UpcomingAppointments: React.FC = () => {
 
         const appointmentsData = schedulingData.map(appointment => {
           const client = clients?.find(c => c.id === appointment.client_id);
-          const broker = brokers?.find(b => b.broker_id === appointment.broker_id);
+          const broker = brokers?.find(b => b.id === appointment.broker_id);
 
           return {
             ...appointment,
@@ -608,13 +676,13 @@ const UpcomingAppointments: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Seção de Agendamentos Atrasados */}
+      {/* Seção de Tarefas Atrasadas */}
       {filteredOverdueAppointments.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-medium text-red-700">
-                {user?.role === 'corretor' ? 'Meus Agendamentos Atrasados' : 'Agendamentos Atrasados'}
+                {user?.role === 'corretor' ? 'Minhas Tarefas Atrasadas' : 'Tarefas Atrasadas'}
                 <Badge variant="destructive" className="ml-2">
                   {filteredOverdueAppointments.length}
                 </Badge>
@@ -651,8 +719,18 @@ const UpcomingAppointments: React.FC = () => {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-medium">
-              {user?.role === 'corretor' ? 'Meus Próximos Agendamentos' : 'Próximos Agendamentos'}
+              {user?.role === 'corretor' ? 'Minhas Próximas Tarefas' : 'Próximas Tarefas'}
             </CardTitle>
+            {(user?.role === 'admin' || user?.role === 'dev') && (
+              <Button 
+                size="sm" 
+                onClick={handleNewTask}
+                className="ml-4 gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Nova Tarefa
+              </Button>
+            )}
             <Button 
               variant="ghost" 
               size="sm"

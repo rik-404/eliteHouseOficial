@@ -6,6 +6,7 @@ import { Square, Bed, Bath, Car } from 'lucide-react';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import ImageGallery from '@/components/ImageGallery';
 import ModalContact from '@/components/ModalContact';
 import { supabase } from '@/lib/supabase';
 import { PropertyType } from '@/components/PropertyCard';
@@ -98,12 +99,11 @@ const PropertyDetails = () => {
         {/* Título do imóvel destacado */}
         <h1 className="text-4xl font-bold mb-10 text-center text-eliteOrange drop-shadow-sm">{property.title}</h1>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Imagem Principal */}
-          <div className="relative aspect-[4/3]">
-            <img 
-              src={property.image_url} 
-              alt={property.title} 
-              className="w-full h-full object-cover rounded-lg"
+          {/* Galeria de Imagens */}
+          <div>
+            <ImageGallery 
+              mainImage={property.image_url} 
+              images={property.images || []} 
             />
             
             {/* Badges */}

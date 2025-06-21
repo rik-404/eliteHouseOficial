@@ -253,7 +253,10 @@ const CreateProperty = () => {
     price: '',
     description: '',
     image: '',
-    featured: false
+    images: ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''], // Array para até 15 imagens adicionais
+    featured: false,
+    status: true, // Ativo por padrão
+    vendido: false // Não vendido por padrão
   });
 
   // Carregar a próxima referência quando o componente é montado
@@ -268,23 +271,30 @@ const CreateProperty = () => {
 
         if (error) throw error;
 
-        // Se não houver imóveis, começa com 0000000
+        // Se não houver imóveis, começa com 0000001
         if (!data || data.length === 0) {
-          setFormData(prev => ({ ...prev, reference: '0000000' }));
+          setFormData(prev => ({ ...prev, reference: '0000001' }));
           return;
         }
 
         // Pega a última referência
         const lastRef = data[0].reference;
-        // Remove os zeros à esquerda e converte para número
-        const lastNumber = parseInt(lastRef.replace(/^0+/, ''));
+        console.log('Última referência encontrada:', lastRef);
+        
+        // Extrai apenas os dígitos da referência
+        const numericPart = lastRef.replace(/\D/g, '');
+        // Converte para número, com fallback para 0
+        const lastNumber = parseInt(numericPart) || 0;
+        console.log('Número extraído:', lastNumber);
+        
         // Incrementa e adiciona zeros à esquerda
         const nextNumber = (lastNumber + 1).toString().padStart(7, '0');
+        console.log('Próxima referência gerada:', nextNumber);
         
         setFormData(prev => ({ ...prev, reference: nextNumber }));
       } catch (error) {
         console.error('Erro ao obter próxima referência:', error);
-        setFormData(prev => ({ ...prev, reference: '0000000' }));
+        setFormData(prev => ({ ...prev, reference: '0000001' }));
       }
     };
     loadNextReference();
@@ -297,65 +307,77 @@ const CreateProperty = () => {
       [name]: value
     }));
   };
+  
+  const handleImageChange = (index: number, value: string) => {
+    const newImages = [...formData.images];
+    newImages[index] = value;
+    setFormData(prev => ({
+      ...prev,
+      images: newImages
+    }));
+  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Verifica se a referência já existe
-    const { data: existing, error: existsError } = await supabase
-      .from('properties')
-      .select('id')
-      .eq('reference', formData.reference)
-      .maybeSingle();
-
-    if (existsError) {
-      toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao verificar a referência",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (existing) {
-      toast({
-        title: "Erro",
-        description: "Esta referência já está em uso",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (existing) {
-      toast({
-        title: "Erro",
-        description: "Esta referência já existe",
-        variant: "destructive"
-      });
-      return;
-    }
-
+  const saveProperty = async (propertyData) => {
     try {
+      // Filtrar apenas as URLs de imagens não vazias
+      const validImages = propertyData.images.filter(img => img.trim() !== '');
+      
       const { data, error } = await supabase
         .from('properties')
         .insert({
-          reference: formData.reference,
-          title: formData.title,
-          type: formData.type,
-          location: formData.location,
-          city: formData.city,
-          uf: formData.uf,
-          area: parseInt(formData.area),
-          bedrooms: parseInt(formData.bedrooms),
-          bathrooms: parseInt(formData.bathrooms),
-          garage: parseInt(formData.garage),
-          price: parseFloat(formData.price),
-          description: formData.description,
-          image_url: formData.image,
-          featured: formData.featured
+          reference: propertyData.reference,
+          title: propertyData.title,
+          type: propertyData.type,
+          location: propertyData.location,
+          city: propertyData.city,
+          uf: propertyData.uf,
+          area: parseInt(propertyData.area) || 0,
+          bedrooms: parseInt(propertyData.bedrooms) || 0,
+          bathrooms: parseInt(propertyData.bathrooms) || 0,
+          garage: parseInt(propertyData.garage) || 0,
+          price: parseFloat(propertyData.price) || 0,
+          description: propertyData.description,
+          image_url: propertyData.image, // Imagem principal
+          additional_images: validImages, // Array de imagens adicionais
+          featured: propertyData.featured,
+          status: propertyData.status !== undefined ? propertyData.status : true, // Ativo por padrão
+          vendido: propertyData.vendido !== undefined ? propertyData.vendido : false // Não vendido por padrão
         });
 
-      if (error) throw error;
+      if (error) {
+        // Verificar se é um erro de conflito (409)
+        if (error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('conflict')) {
+          // Gerar uma nova referência e tentar novamente
+          const currentRef = propertyData.reference;
+          // Extrai apenas os dígitos da referência
+          const numericPart = currentRef.replace(/\D/g, '');
+          // Converte para número, com fallback para 0
+          const currentNumber = parseInt(numericPart) || 0;
+          const newNumber = (currentNumber + 1).toString().padStart(7, '0');
+          
+          toast({
+            title: "Tentando novamente",
+            description: `Referência ${currentRef} já existe. Tentando com ${newNumber}...`
+          });
+          
+          // Atualizar o estado do formulário
+          const updatedData = {
+            ...propertyData,
+            reference: newNumber
+          };
+          
+          setFormData(updatedData);
+          
+          // Esperar um pouco antes de tentar novamente
+          setTimeout(() => {
+            saveProperty(updatedData);
+          }, 500);
+          
+          return false;
+        }
+        
+        throw error;
+      }
 
       toast({
         title: "Sucesso",
@@ -363,13 +385,33 @@ const CreateProperty = () => {
       });
 
       navigate('/admin/properties');
+      return true;
     } catch (error) {
+      console.error('Erro ao salvar imóvel:', error);
       toast({
         title: "Erro",
         description: error.message || "Ocorreu um erro ao criar o imóvel",
         variant: "destructive"
       });
+      return false;
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validar campos obrigatórios
+    if (!formData.title || !formData.type || !formData.location) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha todos os campos obrigatórios",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Salvar diretamente - a função saveProperty já trata conflitos de referência
+    await saveProperty(formData);
   };
 
   return (
@@ -395,6 +437,7 @@ const CreateProperty = () => {
               required
             />
           </div>
+          
           <div className="admin-form-group">
             <Label htmlFor="property-type">Tipo</Label>
             <Select
@@ -411,6 +454,58 @@ const CreateProperty = () => {
                 <SelectItem value="Comercial">Comercial</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          
+          <div className="admin-form-group">
+            <Label htmlFor="property-image">URL da Imagem Principal</Label>
+            <Input
+              id="property-image"
+              name="image"
+              value={formData.image}
+              onChange={handleInputChange}
+              placeholder="https://exemplo.com/imagem.jpg"
+            />
+          </div>
+          
+          <div className="admin-form-group">
+            <Label htmlFor="property-reference">Referência</Label>
+            <Input
+              id="property-reference"
+              name="reference"
+              value={formData.reference}
+              onChange={handleInputChange}
+              disabled
+            />
+          </div>
+        </div>
+        
+        <div className="admin-form-group">
+          <Label>Imagens Adicionais (até 15)</Label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+            {formData.images.map((image, index) => (
+              <div key={index} className="space-y-1">
+                <div className="flex">
+                  <Input
+                    placeholder={`URL da imagem ${index + 1}`}
+                    value={image}
+                    onChange={(e) => handleImageChange(index, e.target.value)}
+                    className="text-sm"
+                  />
+                </div>
+                {image && (
+                  <div className="h-20 w-full overflow-hidden rounded border">
+                    <img 
+                      src={image} 
+                      alt={`Prévia ${index + 1}`} 
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150?text=Erro+na+imagem';
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
 

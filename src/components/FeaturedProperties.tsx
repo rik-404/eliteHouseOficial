@@ -16,13 +16,16 @@ const FeaturedProperties = () => {
     const fetchFeaturedProperties = async () => {
       try {
         setLoading(true);
+        // Consulta apenas por featured=true e vendido=false, sem filtrar por status
         const { data, error } = await supabase
           .from('properties')
           .select('*')
           .eq('featured', true)
-          .eq('status', true)
           .eq('vendido', false)
           .order('created_at', { ascending: false });
+        
+        // Log para debug
+        console.log('Imóveis em destaque encontrados:', data?.length || 0);
 
         if (error) throw error;
         

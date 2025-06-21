@@ -1,6 +1,20 @@
 import { lazy } from 'react';
 import { Navigate } from 'react-router-dom';
 import type { RouteObject } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+
+// Componente para verificar se o usuário tem permissão para acessar os logs
+const ProtectedActivityLogs = () => {
+  const { user } = useAuth();
+  
+  // Se o usuário for corretor, redireciona para o dashboard
+  if (user?.role === 'corretor') {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+  
+  // Caso contrário, mostra os logs
+  return <ActivityLogs />;
+};
 
 const ActivityLogs = lazy(() => import('../pages/admin/ActivityLogs').then(module => ({ default: module.ActivityLogs })));
 
@@ -22,6 +36,7 @@ const EditClient = lazy(() => import('../pages/admin/EditClient'));
 const NewClient = lazy(() => import('../pages/admin/NewClient'));
 const SupabaseAccess = lazy(() => import('../pages/admin/SupabaseAccess'));
 const ClientEdit = lazy(() => import('../pages/admin/ClientEdit'));
+const NewTask = lazy(() => import('../pages/admin/NewTask'));
 
 export const adminRoutes: RouteObject[] = [
   {
@@ -50,7 +65,7 @@ export const adminRoutes: RouteObject[] = [
   },
   {
     path: '/admin/logs',
-    element: <ActivityLogsPage />
+    element: <ProtectedActivityLogs />
   },
   {
     path: '/admin/properties',
@@ -75,6 +90,14 @@ export const adminRoutes: RouteObject[] = [
   {
     path: '/admin/clients/:id/edit',
     element: <EditClient />
+  },
+  {
+    path: '/admin/tasks/new',
+    element: <NewTask />
+  },
+  {
+    path: '/admin/clients/new-task',
+    element: <NewTask />
   },
   {
     path: '/admin/clients/edit/:id',

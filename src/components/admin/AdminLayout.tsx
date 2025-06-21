@@ -77,12 +77,14 @@ const AdminLayout = () => {
                 )}
               </Link>
             </li>
-            <li>
-              <Link to="/admin/logs" className="flex items-center px-4 py-2 text-white hover:bg-[#242434] rounded transition-colors duration-200">
-                <Clock className="w-4 h-4 mr-3" />
-                Logs
-              </Link>
-            </li>
+            {user?.role !== 'corretor' && (
+              <li>
+                <Link to="/admin/logs" className="flex items-center px-4 py-2 text-white hover:bg-[#242434] rounded transition-colors duration-200">
+                  <Clock className="w-4 h-4 mr-3" />
+                  Logs
+                </Link>
+              </li>
+            )}
           </ul>
         </nav>
       </div>
