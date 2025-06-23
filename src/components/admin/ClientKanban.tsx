@@ -99,8 +99,9 @@ const ClientKanban: React.FC<ClientKanbanProps> = ({ clients, updateClientStatus
           </div>
         </div>
         {isRestrictedStatus && (
-          <div className="mt-2 text-sm text-red-500 px-2">
-            Clientes neste status não podem ser movidos
+          <div className="mt-2 text-sm text-yellow-600 bg-yellow-50 p-2 rounded-md">
+            <AlertCircle className="inline w-4 h-4 mr-1" />
+            Apenas administradores podem mover clientes deste status
           </div>
         )}
 
@@ -122,7 +123,11 @@ const ClientKanban: React.FC<ClientKanbanProps> = ({ clients, updateClientStatus
                         key={client.id}
                         draggableId={client.id}
                         index={index}
-                        isDragDisabled={client.status === 'Análise bancária' || client.status === 'Aprovado' || client.status === 'Condicionado' || client.status === 'Reprovado'}
+                        isDragDisabled={(user?.role !== 'admin' && user?.role !== 'dev') && 
+                          (client.status === 'Análise bancária' || 
+                           client.status === 'Aprovado' || 
+                           client.status === 'Condicionado' || 
+                           client.status === 'Reprovado')}
                       >
                         {(provided) => (
                           <div
@@ -141,9 +146,22 @@ const ClientKanban: React.FC<ClientKanbanProps> = ({ clients, updateClientStatus
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className={`bg-yellow-400 hover:bg-yellow-500 text-white border-none ${user?.role === 'corretor' && (client.status === 'Análise bancária' || client.status === 'Aprovado' || client.status === 'Condicionado' || client.status === 'Reprovado') ? 'cursor-not-allowed bg-gray-400 hover:bg-gray-400 text-gray-100' : ''}`}
+                                className={`bg-yellow-400 hover:bg-yellow-500 text-white border-none ${
+                                  (user?.role === 'corretor' && 
+                                  (client.status === 'Análise bancária' || 
+                                   client.status === 'Aprovado' || 
+                                   client.status === 'Condicionado' || 
+                                   client.status === 'Reprovado')) 
+                                    ? 'cursor-not-allowed bg-gray-400 hover:bg-gray-400 text-gray-100' 
+                                    : ''
+                                }`}
                                 onClick={() => {
-                                  if (user?.role === 'corretor' && (client.status === 'Análise bancária' || client.status === 'Aprovado' || client.status === 'Condicionado' || client.status === 'Reprovado')) {
+                                  // Permite que admin e dev editem qualquer cliente
+                                  if (user?.role === 'corretor' && 
+                                      (client.status === 'Análise bancária' || 
+                                       client.status === 'Aprovado' || 
+                                       client.status === 'Condicionado' || 
+                                       client.status === 'Reprovado')) {
                                     return;
                                   }
                                   navigate(`/admin/clients/${client.id}/edit`);
@@ -174,22 +192,26 @@ const ClientKanban: React.FC<ClientKanbanProps> = ({ clients, updateClientStatus
     if (result.source.droppableId !== result.destination.droppableId) {
       const [source, destination] = [result.source.droppableId, result.destination.droppableId];
       const sourceClients = getClientsInStatus(source);
-      const destinationClients = getClientsInStatus(destination);
       const draggedClient = sourceClients[result.source.index];
 
-      // Verificar se o cliente está em um status restrito
-      if (draggedClient.status === 'Análise bancária' || draggedClient.status === 'Aprovado' || draggedClient.status === 'Condicionado' || draggedClient.status === 'Reprovado') {
-        alert('Este cliente não pode ser movido para outro status');
+      // Verificar se o usuário é admin ou dev - se for, permitir mover livremente
+      const isAdminOrDev = user?.role === 'admin' || user?.role === 'dev';
+      
+      // Se não for admin/dev, verificar se o cliente está em um status restrito
+      if (!isAdminOrDev && (draggedClient.status === 'Análise bancária' || 
+                           draggedClient.status === 'Aprovado' || 
+                           draggedClient.status === 'Condicionado' || 
+                           draggedClient.status === 'Reprovado')) {
+        alert('Você não tem permissão para mover clientes deste status');
         return;
       }
-
-      // Verificar permissões para corretores
 
       try {
         setIsLoading(true);
         await updateClientStatus(draggedClient.id, destination);
       } catch (error) {
         console.error('Erro ao atualizar status do cliente:', error);
+        alert('Ocorreu um erro ao atualizar o status do cliente');
       } finally {
         setIsLoading(false);
       }

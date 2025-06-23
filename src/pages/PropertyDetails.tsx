@@ -103,7 +103,10 @@ const PropertyDetails = () => {
           <div>
             <ImageGallery 
               mainImage={property.image_url} 
-              images={property.images || []} 
+              images={[
+                ...(property.additional_images || []),
+                ...(property.additional_media?.filter((m: any) => m.type === 'image').map((m: any) => m.url) || [])
+              ]} 
             />
             
             {/* Badges */}

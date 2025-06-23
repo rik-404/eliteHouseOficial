@@ -110,8 +110,7 @@ const Properties: React.FC = () => {
         const { data: propertiesData, error: propertiesError } = await supabase
           .from('properties')
           .select('*')
-          .eq('status', true)
-          .eq('vendido', false)
+          .eq('status', true) // Apenas imóveis ativos
           .order('created_at', { ascending: false });
 
         if (propertiesError) throw propertiesError;

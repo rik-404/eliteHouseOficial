@@ -1,14 +1,57 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ImageGalleryProps {
-  images: string[];
+  images?: string[] | null;
   mainImage: string;
 }
 
-const ImageGallery: React.FC<ImageGalleryProps> = ({ images, mainImage }) => {
-  const allImages = mainImage ? [mainImage, ...images.filter(img => img !== mainImage)] : images;
+const ImageGallery: React.FC<ImageGalleryProps> = ({ images = [], mainImage }) => {
+  // Garante que images seja um array e filtra valores vazios/nulos
+  const safeImages = useMemo(() => {
+    try {
+      return Array.isArray(images) ? images.filter((img): img is string => 
+        typeof img === 'string' && img.trim() !== ''
+      ) : [];
+    } catch (error) {
+      console.error('Erro ao processar imagens:', error);
+      return [];
+    }
+  }, [images]);
+  
+  // Cria o array de todas as imagens, garantindo que não haja duplicatas
+  const allImages = useMemo(() => {
+    try {
+      const uniqueImages = new Set<string>();
+      
+      // Adiciona a imagem principal primeiro, se existir
+      if (mainImage && typeof mainImage === 'string' && mainImage.trim() !== '') {
+        uniqueImages.add(mainImage);
+      }
+      
+      // Adiciona as imagens adicionais, garantindo que não sejam iguais à principal
+      safeImages.forEach(img => {
+        if (img && img !== mainImage) {
+          uniqueImages.add(img);
+        }
+      });
+      
+      return Array.from(uniqueImages);
+    } catch (error) {
+      console.error('Erro ao processar todas as imagens:', error);
+      return [];
+    }
+  }, [mainImage, safeImages]);
+  
+  // Se não houver imagens, retorna uma mensagem
+  if (allImages.length === 0) {
+    return (
+      <div className="w-full aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
+        <p className="text-gray-500">Nenhuma imagem disponível</p>
+      </div>
+    );
+  }
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -18,9 +61,16 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images, mainImage }) => {
     document.body.style.overflow = 'hidden'; // Impedir rolagem quando o modal estiver aberto
   };
 
-  const closeModal = () => {
+  const closeModal = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
     setIsModalOpen(false);
     document.body.style.overflow = 'auto'; // Restaurar rolagem
+  };
+  
+  const handleBackdropClick = () => {
+    setIsModalOpen(false);
+    document.body.style.overflow = 'auto';
   };
 
   const goToPrevious = () => {
@@ -44,7 +94,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images, mainImage }) => {
           goToNext();
           break;
         case 'Escape':
-          closeModal();
+          setIsModalOpen(false);
+          document.body.style.overflow = 'auto';
           break;
         default:
           break;
@@ -111,21 +162,28 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images, mainImage }) => {
 
       {/* Modal de visualização em tela cheia */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center">
-          <div className="relative w-full h-full flex flex-col">
+        <div 
+        className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+        onClick={handleBackdropClick}
+      >
+          <div 
+            className="relative w-full h-full flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Barra superior */}
             <div className="flex justify-between items-center p-4 text-white">
               <div className="text-sm">
                 {currentIndex + 1} / {allImages.length}
               </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={closeModal}
-                className="text-white hover:bg-white/20"
-              >
-                <X className="h-6 w-6" />
-              </Button>
+              <div className="relative">
+                <button 
+                  type="button"
+                  onClick={(e) => closeModal(e)}
+                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-10 w-10 text-white hover:bg-white/20"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
             </div>
             
             {/* Imagem principal */}

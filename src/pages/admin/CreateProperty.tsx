@@ -239,7 +239,27 @@ const locations = [
 const CreateProperty = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [formData, setFormData] = useState({
+  type FormData = {
+    reference: string;
+    title: string;
+    type: string;
+    location: string;
+    city: string;
+    uf: string;
+    area: string;
+    bedrooms: string;
+    bathrooms: string;
+    garage: string;
+    price: string;
+    description: string;
+    image: string;
+    images: string[];
+    featured: boolean;
+    status: boolean;  // true para ativo, false para inativo
+    vendido: boolean;
+  };
+
+  const [formData, setFormData] = useState<FormData>({
     reference: '',
     title: '',
     type: '',
@@ -255,9 +275,11 @@ const CreateProperty = () => {
     image: '',
     images: ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''], // Array para até 15 imagens adicionais
     featured: false,
-    status: true, // Ativo por padrão
+    status: true, // true para ativo, false para inativo
     vendido: false // Não vendido por padrão
   });
+
+
 
   // Carregar a próxima referência quando o componente é montado
   useEffect(() => {
@@ -340,8 +362,8 @@ const CreateProperty = () => {
           image_url: propertyData.image, // Imagem principal
           additional_images: validImages, // Array de imagens adicionais
           featured: propertyData.featured,
-          status: propertyData.status !== undefined ? propertyData.status : true, // Ativo por padrão
-          vendido: propertyData.vendido !== undefined ? propertyData.vendido : false // Não vendido por padrão
+          status: propertyData.status || 'ativo', // 'ativo' por padrão
+          vendido: propertyData.vendido || false // Não vendido por padrão
         });
 
       if (error) {

@@ -4,6 +4,11 @@ import { Bed, Bath, MapPin, Square, Car } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
+export type MediaItem = {
+  url: string;
+  type: 'image' | 'video';
+};
+
 export type PropertyType = {
   id: string;
   reference: string;
@@ -18,6 +23,8 @@ export type PropertyType = {
   garage?: number;
   image_url: string;
   images?: string[];
+  additional_images?: string[]; // Campo legado para compatibilidade
+  additional_media?: MediaItem[]; // Novo campo para mídias adicionais (imagens e vídeos)
   type: 'Apartamento' | 'Casa' | 'Cobertura' | 'Terreno';
   featured?: boolean;
   description?: string;
