@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fs from 'fs';
+import { version as pkgVersion } from './package.json';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -41,6 +42,9 @@ export default defineConfig(({ mode }) => ({
       port: 8080,
       protocol: "ws"
     }
+  },
+  define: {
+    __APP_VERSION__: JSON.stringify(pkgVersion),
   },
   plugins: [
     react(),
