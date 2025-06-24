@@ -324,7 +324,7 @@ const EditClient = () => {
 
   return (
     <div className="container mx-auto py-8">
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-between mb-4">
         <Button
           variant="outline"
           onClick={() => navigate('/admin/clients')}
@@ -347,13 +347,36 @@ const EditClient = () => {
       )}
 
       <Card className="relative">
-        <CardHeader>
+        <CardHeader className={isEditSectionMinimized ? 'pb-2' : ''}>
           <div className="flex justify-between items-center">
-            <CardTitle>Editar Cliente</CardTitle>
+            <div className="flex items-center space-x-4">
+              <CardTitle className={isEditSectionMinimized ? 'opacity-50' : ''}>
+                Editar Cliente
+              </CardTitle>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsEditSectionMinimized(!isEditSectionMinimized)}
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                {isEditSectionMinimized ? (
+                  <>
+                    <ChevronDown className="h-4 w-4 mr-1" />
+                    Mostrar
+                  </>
+                ) : (
+                  <>
+                    <ChevronUp className="h-4 w-4 mr-1" />
+                    Esconder
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className={isEditSectionMinimized ? 'hidden' : ''}>
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Linha 1: Dados Pessoais e Contato */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

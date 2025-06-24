@@ -271,14 +271,7 @@ const ClientDocuments: React.FC<ClientDocumentsProps> = ({ clientId }) => {
       let successCount = 0;
       let errorCount = 0;
       
-      // Criar pastas por tipo de documento
-      const foldersByType: Record<string, JSZip> = {};
-      
-      for (const docType of DOCUMENT_TYPES) {
-        foldersByType[docType.value] = zip.folder(docType.label) as JSZip;
-      }
-      
-      // Adicionar documentos às pastas correspondentes
+      // Adicionar todos os documentos diretamente na raiz do ZIP
       for (const doc of documents) {
         try {
           // Obter o conteúdo Base64 do documento
@@ -293,11 +286,11 @@ const ClientDocuments: React.FC<ClientDocumentsProps> = ({ clientId }) => {
           // Remover o prefixo "data:application/pdf;base64," do conteúdo Base64
           const base64Data = base64Content.replace(/^data:application\/pdf;base64,/, '');
           
-          // Determinar a pasta correta com base no tipo de documento
-          const folder = foldersByType[doc.document_type] || foldersByType['OUTROS'];
-          
-          // Adicionar o documento à pasta
-          folder.file(doc.file_name || `documento_${doc.id}.pdf`, base64Data, { base64: true });
+          // Adicionar o documento diretamente na raiz do ZIP
+          // Adiciona o tipo do documento ao nome do arquivo para facilitar a identificação
+          const docType = DOCUMENT_TYPES.find(t => t.value === doc.document_type)?.label || 'OUTROS';
+          const fileName = `[${docType}]_${doc.file_name || `documento_${doc.id}.pdf`}`;
+          zip.file(fileName, base64Data, { base64: true });
           
           successCount++;
         } catch (docError) {
