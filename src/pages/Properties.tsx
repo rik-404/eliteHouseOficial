@@ -14,6 +14,7 @@ import { Filter } from 'lucide-react';
 
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import CustomForm from '@/components/ui/CustomForm';
 
 const locations = [
   'Todos'
@@ -184,7 +185,7 @@ const Properties: React.FC = () => {
                 <div className="bg-card p-6 rounded-lg sticky top-24">
                   <h3 className="text-lg font-medium text-eliteOrange mb-6">Filtros</h3>
                   
-                  <form onSubmit={handleApplyFilters}>
+                  <CustomForm onSubmit={handleApplyFilters}>
                     <div className="space-y-6">
                       <div className="space-y-2">
                         <Label htmlFor="location-desktop">Localização</Label>
@@ -244,7 +245,7 @@ const Properties: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                  </form>
+                  </CustomForm>
                 </div>
               </div>
               
@@ -279,7 +280,7 @@ const Properties: React.FC = () => {
                       </button>
                     </div>
                     
-                    <form onSubmit={handleApplyFilters}>
+                    <CustomForm onSubmit={handleApplyFilters}>
                       <div className="space-y-6">
                         <div className="space-y-2">
                           <Label htmlFor="location-mobile">Localização</Label>
@@ -346,7 +347,7 @@ const Properties: React.FC = () => {
                           Aplicar Filtros
                         </Button>
                       </div>
-                    </form>
+                    </CustomForm>
                   </div>
                 )}
                 

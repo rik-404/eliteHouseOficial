@@ -8,6 +8,7 @@ import { Phone, Mail, MapPin } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Toast } from '@/components/ui/toast';
+import CustomForm from '@/components/ui/CustomForm';
 
 interface ModalContactProps {
   propertiesId?: string;
@@ -123,7 +124,7 @@ const ModalContact = ({ propertiesId }: ModalContactProps) => {
         <DialogHeader>
           <DialogTitle>Entre em contato conosco</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <CustomForm onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Nome</Label>
             <Input
@@ -182,7 +183,7 @@ const ModalContact = ({ propertiesId }: ModalContactProps) => {
           >
             {isSubmitting ? 'Enviando...' : 'Enviar mensagem'}
           </Button>
-        </form>
+        </CustomForm>
       </DialogContent>
     </Dialog>
   );

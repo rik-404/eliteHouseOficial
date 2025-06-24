@@ -11,6 +11,7 @@ import { Pencil, Image as ImageIcon, Video } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import MediaManager, { MediaItem } from '@/components/admin/MediaManager';
+import CustomForm from '@/components/ui/CustomForm';
 
 const EditProperty = () => {
   const { id } = useParams();
@@ -32,7 +33,7 @@ const EditProperty = () => {
     description: '',
     image_url: '',
     additional_images: [] as string[],
-    additional_media: [] as Array<{url: string; type: 'image' | 'video'}>,
+    additional_media: [] as Array<{url: string; type: 'image' | 'video' | 'youtube'}>,
     featured: false,
     status: true, // true para ativo, false para inativo
     vendido: false
@@ -211,7 +212,7 @@ const EditProperty = () => {
     } as const));
   };
 
-  const handleMediaChange = (updatedMedias: MediaItem[], mainImageUrl: string) => {
+  const handleMediaChange = (updatedMedias: Array<{ url: string; type: 'image' | 'video' | 'youtube' }>, mainImageUrl: string) => {
     setMedias(updatedMedias);
     setProperty(prev => ({
       ...prev,
@@ -219,9 +220,9 @@ const EditProperty = () => {
     }));
   };
 
-  const uploadNewMedias = async (): Promise<{url: string; type: 'image' | 'video'}[]> => {
-    const newMedias = medias.filter(media => media.isNew && media.file);
-    const uploadedMedias: {url: string; type: 'image' | 'video'}[] = [];
+  const uploadNewMedias = async (): Promise<{url: string; type: 'image' | 'video' | 'youtube'}[]> => {
+    const newMedias = medias.filter(media => media.isNew && (media.file || media.type === 'youtube'));
+    const uploadedMedias: {url: string; type: 'image' | 'video' | 'youtube'}[] = [];
     
     for (const media of newMedias) {
       try {
@@ -343,7 +344,7 @@ const EditProperty = () => {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Editar Imóvel</h2>
       <div className="bg-white p-6 rounded-lg shadow-md">
-        <form onSubmit={handleSubmit} id="property-form" className="space-y-6">
+        <CustomForm onSubmit={handleSubmit} id="property-form" className="space-y-6">
           {/* Seção de Mídias */}
           <div className="border-t border-b border-gray-200 py-6">
             <h3 className="text-lg font-medium mb-4">Mídias do Imóvel</h3>
@@ -608,7 +609,7 @@ const EditProperty = () => {
           >
             {uploading ? 'Salvando...' : 'Salvar Alterações'}
           </Button>
-        </form>
+        </CustomForm>
       </div>
     </div>
   );

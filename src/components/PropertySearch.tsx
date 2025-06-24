@@ -8,6 +8,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/supabase';
+import CustomForm from '@/components/ui/CustomForm';
 
 const PropertySearch = () => {
   const navigate = useNavigate();
@@ -83,7 +84,7 @@ const PropertySearch = () => {
         </div>
         
         <div className="bg-card rounded-2xl p-6 md:p-10 shadow-lg">
-          <form onSubmit={handleSubmit}>
+          <CustomForm onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="location">Localização</Label>
@@ -133,7 +134,7 @@ const PropertySearch = () => {
                 Buscar Imóveis
               </Button>
             </div>
-          </form>
+          </CustomForm>
         </div>
       </div>
     </section>

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/TempAuthContext';
 import { User } from '@/types/user';
 import { supabase } from '@/lib/supabase';
+import CustomForm from '@/components/ui/CustomForm';
 
 
 interface ProfileForm extends Omit<User, 'password'> {
@@ -146,7 +147,7 @@ const Profile = () => {
           Voltar
         </Button>
       </div>
-      <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 rounded-lg shadow-md">
+      <CustomForm onSubmit={handleSubmit} className="space-y-6 bg-white p-6 rounded-lg shadow-md">
         {passwordError && (
           <div className="p-4 text-red-500 bg-red-50 rounded-md mb-6">
             {passwordError}
@@ -325,7 +326,7 @@ const Profile = () => {
             {submitLoading ? 'Salvando...' : 'Salvar'}
           </Button>
         </div>
-      </form>
+      </CustomForm>
     </div>
   );
 };

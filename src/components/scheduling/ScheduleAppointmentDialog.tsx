@@ -11,6 +11,7 @@ import { ptBR } from 'date-fns/locale';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/TempAuthContext';
+import CustomForm from '@/components/ui/CustomForm';
 
 interface ScheduleAppointmentDialogProps {
   clientId: string;
@@ -135,7 +136,7 @@ export const ScheduleAppointmentDialog = ({
           Cliente: <span className="font-medium">{clientName}</span>
         </p>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <CustomForm onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="title">Título <span className="text-red-500">*</span></Label>
             <Input
@@ -231,7 +232,7 @@ export const ScheduleAppointmentDialog = ({
               {loading ? 'Salvando...' : 'Agendar'}
             </Button>
           </div>
-        </form>
+        </CustomForm>
       </PopoverContent>
     </Popover>
   );

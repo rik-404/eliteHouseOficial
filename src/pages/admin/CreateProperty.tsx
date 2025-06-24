@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import CustomForm from '@/components/ui/CustomForm';
 
 const locations = [
   'Água Branca',
@@ -445,7 +446,7 @@ const CreateProperty = () => {
         </Button>
       </div>
       <div className="bg-white p-6 rounded-lg shadow-md">
-        <form onSubmit={handleSubmit} id="property-form" className="space-y-6">
+        <CustomForm onSubmit={handleSubmit} id="property-form" className="space-y-6">
         <input type="hidden" id="property-id" value="" />
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -685,7 +686,7 @@ const CreateProperty = () => {
             Salvar
           </Button>
         </div>
-        </form>
+        </CustomForm>
       </div>
     </div>
   );

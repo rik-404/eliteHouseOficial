@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import CustomForm from '@/components/ui/CustomForm';
 
 interface PropertyFormProps {
   property?: {
@@ -212,7 +213,7 @@ const PropertyForm = ({ property }: PropertyFormProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <CustomForm onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Basic Info */}
         <div className="space-y-4">
@@ -430,7 +431,7 @@ const PropertyForm = ({ property }: PropertyFormProps) => {
           {uploading ? 'Salvando...' : (property ? 'Atualizar Imóvel' : 'Cadastrar Imóvel')}
         </Button>
       </div>
-    </form>
+    </CustomForm>
   );
 };
 

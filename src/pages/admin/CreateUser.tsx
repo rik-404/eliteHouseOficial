@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { User } from '../../types/user';
 import { useAuth } from '@/contexts/TempAuthContext';
+import CustomForm from '@/components/ui/CustomForm';
 
 const CreateUser = () => {
   const [name, setName] = useState('');
@@ -156,7 +157,7 @@ const CreateUser = () => {
       )}
 
       <div className="bg-white p-6 rounded-lg shadow-md">
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <CustomForm onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="name">Nome</Label>
@@ -314,7 +315,7 @@ const CreateUser = () => {
               {loading ? 'Criando...' : 'Criar Usuário'}
             </Button>
           </div>
-        </form>
+        </CustomForm>
       </div>
     </div>
   );

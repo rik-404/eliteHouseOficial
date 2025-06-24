@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/TempAuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import CustomForm from '@/components/ui/CustomForm';
 import { ScheduleAppointmentDialog } from '@/components/scheduling/ScheduleAppointmentDialog';
 import ClientDocuments from '@/components/client/ClientDocuments';
 import ClientAppointmentHistory from '@/components/client/ClientAppointmentHistory';
@@ -377,7 +378,7 @@ const EditClient = () => {
         </CardHeader>
 
         <CardContent className={isEditSectionMinimized ? 'hidden' : ''}>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <CustomForm onSubmit={handleSubmit} className="space-y-6">
             {/* Linha 1: Dados Pessoais e Contato */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Coluna 1: Dados Pessoais */}
@@ -624,7 +625,7 @@ const EditClient = () => {
                 </Button>
               </div>
             </div>
-          </form>
+          </CustomForm>
         </CardContent>
       </Card>
 

@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { User } from '@/types/user';
+import CustomForm from '@/components/ui/CustomForm';
 
 interface UserFormProps {
   user?: User;
@@ -31,7 +32,10 @@ const UserForm = ({ user }: UserFormProps) => {
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type, checked } = e.target;
+    const target = e.target as HTMLInputElement; // Cast para HTMLInputElement para acessar a propriedade 'checked'
+    const { name, value, type } = target;
+    const checked = type === 'checkbox' ? target.checked : undefined;
+    
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
@@ -75,7 +79,7 @@ const UserForm = ({ user }: UserFormProps) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <CustomForm onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <Label htmlFor="name">Nome</Label>
@@ -231,7 +235,7 @@ const UserForm = ({ user }: UserFormProps) => {
           {user ? 'Atualizar' : 'Criar'}
         </Button>
       </div>
-    </form>
+    </CustomForm>
   );
 };
 

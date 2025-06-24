@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/TempAuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import CustomForm from '@/components/ui/CustomForm';
 
 interface ViaCEPResponse {
   cep: string;
@@ -307,7 +308,7 @@ export const NewClient = () => {
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Criar Novo Cliente</h1>
       </div>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <CustomForm onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="name">Nome <span className="text-red-500">*</span></Label>
@@ -487,7 +488,7 @@ export const NewClient = () => {
             {loading ? 'Criando...' : 'Criar Cliente'}
           </Button>
         </div>
-      </form>
+      </CustomForm>
     </div>
   );
 };

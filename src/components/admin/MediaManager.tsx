@@ -4,6 +4,7 @@ import { X, Upload, Image as ImageIcon, Video, Trash2, Youtube } from 'lucide-re
 import { useToast } from '@/hooks/use-toast';
 import { uploadFileWithRetry, getPublicUrl } from '@/lib/uploadHelpers';
 import { Input } from '@/components/ui/input';
+import CustomForm from '@/components/ui/CustomForm';
 
 export interface MediaItem {
   url: string;
@@ -14,7 +15,7 @@ export interface MediaItem {
 }
 
 interface MediaManagerProps {
-  initialMedias?: Array<{ url: string; type: 'image' | 'video' }>;
+  initialMedias?: Array<{ url: string; type: 'image' | 'video' | 'youtube' }>;
   mainImageUrl?: string;
   onChange: (medias: MediaItem[], mainImageUrl: string) => void;
   maxFiles?: number;
@@ -286,7 +287,7 @@ const MediaManager: React.FC<MediaManagerProps> = ({
           
           {/* Adicionar vídeo do YouTube */}
           <div className="mt-4">
-            <form onSubmit={handleYoutubeSubmit} className="space-y-2">
+            <CustomForm onSubmit={handleYoutubeSubmit} className="space-y-2">
               <div className="flex space-x-2">
                 <Input
                   type="text"
@@ -306,7 +307,7 @@ const MediaManager: React.FC<MediaManagerProps> = ({
                 </Button>
               </div>
               <p className="text-xs text-gray-500">Exemplo: https://www.youtube.com/watch?v=...</p>
-            </form>
+            </CustomForm>
           </div>
         </div>
       </div>

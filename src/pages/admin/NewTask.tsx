@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
+import CustomForm from '@/components/ui/CustomForm';
 
 export const NewTask = () => {
   const navigate = useNavigate();
@@ -199,7 +200,7 @@ export const NewTask = () => {
           <CardTitle>Nova Tarefa</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <CustomForm onSubmit={handleSubmit} className="space-y-6">
             {error && (
               <div className="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg">
                 {error}
@@ -319,7 +320,7 @@ export const NewTask = () => {
                 )}
               </Button>
             </div>
-          </form>
+          </CustomForm>
         </CardContent>
       </Card>
     </div>

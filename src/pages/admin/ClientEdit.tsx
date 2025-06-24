@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/TempAuthContext';
 import { Client } from '../../types/client';
+import CustomForm from '@/components/ui/CustomForm';
 
 const ClientEdit = () => {
   const { id } = useParams();
@@ -178,7 +179,7 @@ const ClientEdit = () => {
       <div className="mb-6">
         <h1 className="text-2xl font-bold">{id ? 'Editar Cliente' : 'Novo Cliente'}</h1>
       </div>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <CustomForm onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="name">Nome</Label>
@@ -335,7 +336,7 @@ const ClientEdit = () => {
             {loading ? 'Salvando...' : 'Salvar'}
           </Button>
         </div>
-      </form>
+      </CustomForm>
     </div>
   );
 };

@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/TempAuthContext';
+import CustomForm from '@/components/ui/CustomForm';
 
 interface PasswordConfirmationModalProps {
   open: boolean;
@@ -39,7 +40,7 @@ export const PasswordConfirmationModal: React.FC<PasswordConfirmationModalProps>
         <DialogHeader>
           <DialogTitle>Confirmação de Senha</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <CustomForm onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Digite sua senha para confirmar
@@ -63,7 +64,7 @@ export const PasswordConfirmationModal: React.FC<PasswordConfirmationModalProps>
               Confirmar
             </Button>
           </div>
-        </form>
+        </CustomForm>
       </DialogContent>
     </Dialog>
   );

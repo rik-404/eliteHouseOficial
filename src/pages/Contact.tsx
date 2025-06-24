@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Phone, Mail, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
+import CustomForm from '@/components/ui/CustomForm';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -152,7 +153,7 @@ const Contact = () => {
                 <div className="bg-card p-8 rounded-lg">
                   <h2 className="text-2xl font-bold text-eliteBlue mb-6">Envie uma Mensagem</h2>
                   
-                  <form onSubmit={handleSubmit} className="space-y-6">
+                  <CustomForm onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-6">
                       <div className="space-y-2">
                         <Label htmlFor="name">Nome Completo</Label>
@@ -208,7 +209,7 @@ const Contact = () => {
                     >
                       {isSubmitting ? 'Enviando...' : 'Enviar Mensagem'}
                     </Button>
-                  </form>
+                  </CustomForm>
                 </div>
               </div>
             </div>

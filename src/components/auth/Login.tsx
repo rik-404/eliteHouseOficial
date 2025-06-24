@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import CustomForm from '@/components/ui/CustomForm';
 const Login = () => {
   const navigate = useNavigate();
   const { signIn } = useAuth();
@@ -47,7 +48,7 @@ const Login = () => {
             {error === 'Usuário inativo' ? 'Este usuário está inativo. Entre em contato com o administrador.' : error ? 'Usuário ou senha inválidos' : ''}
           </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <CustomForm onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="username" className="text-white">Usuário</Label>
             <Input
@@ -84,7 +85,7 @@ const Login = () => {
               Voltar para tela inicial
             </button>
           </div>
-        </form>
+        </CustomForm>
 
 
       </div>

@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useNavigate } from 'react-router-dom';
 import { Switch } from '@/components/ui/switch';
+import CustomForm from '@/components/ui/CustomForm';
 
 const UserEdit = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -124,7 +125,7 @@ const UserEdit = () => {
           </div>
         </CardHeader>
         <CardContent>
-           <form onSubmit={handleSubmit} className="space-y-4">
+           <CustomForm onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="name">Nome <span className="text-red-500">*</span></Label>
@@ -268,7 +269,7 @@ const UserEdit = () => {
                 {loading ? 'Salvando...' : 'Salvar'}
               </Button>
             </div>
-          </form>
+          </CustomForm>
         </CardContent>
       </Card>
     </div>
