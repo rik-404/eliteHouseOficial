@@ -26,6 +26,9 @@ interface Client {
   email?: string;
   phone: string;
   cpf: string;
+  rg?: string | null;
+  birth_date?: string | null;
+  pis?: string | null;
   cep?: string;
   street?: string;
   number?: string;
@@ -51,6 +54,9 @@ export const NewClient = () => {
     email: '',
     phone: '',
     cpf: '',
+    rg: '',
+    birth_date: '',
+    pis: '',
     cep: '',
     street: '',
     number: '',
@@ -132,10 +138,48 @@ export const NewClient = () => {
     fetchBrokers();
   }, []);
 
+  // Função para formatar CPF
+  const formatCPF = (cpf: string) => {
+    return cpf.replace(/\D/g, '')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  };
+
+  // Função para formatar PIS
+  const formatPIS = (pis: string) => {
+    return pis.replace(/\D/g, '')
+      .replace(/^(\d{3})(\d{5})(\d{2})(\d{1})$/, '$1.$2.$3-$4');
+  };
+
+  // Função para formatar RG
+  const formatRG = (rg: string) => {
+    // Remove tudo que não for dígito
+    const value = rg.replace(/\D/g, '');
+    
+    // Verifica se tem o dígito verificador (último dígito pode ser X)
+    if (value.length <= 2) return value;
+    
+    // Formatação: XX.XXX.XXX-X
+    return value
+      .replace(/^(\d{2})(\d{3})(\d{3})([0-9Xx])$/, '$1.$2.$3-$4')
+      .toUpperCase();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    // Formatar CPF, RG e PIS antes de enviar
+    const formattedClient = {
+      ...client,
+      cpf: client.cpf ? formatCPF(client.cpf) : client.cpf,
+      rg: client.rg ? formatRG(client.rg) : client.rg,
+      pis: client.pis ? formatPIS(client.pis) : client.pis
+    };
+    
+    setClient(formattedClient);
 
     try {
       console.log('Dados do cliente antes da validação:', client);
@@ -144,6 +188,7 @@ export const NewClient = () => {
       const clientData = {
         name: client.name,
         cpf: client.cpf,
+        rg: client.rg,
         email: client.email,
         phone: client.phone,
         cep: client.cep,
@@ -179,6 +224,9 @@ export const NewClient = () => {
       const insertData = {
         name: client.name,
         cpf: client.cpf,
+        rg: client.rg,
+        birth_date: client.birth_date,
+        pis: client.pis,
         email: client.email,
         phone: client.phone,
         cep: client.cep,
@@ -276,6 +324,34 @@ export const NewClient = () => {
               id="cpf"
               value={client.cpf}
               onChange={(e) => setClient({ ...client, cpf: e.target.value })}
+              placeholder="000.000.000-00"
+            />
+          </div>
+          <div>
+            <Label htmlFor="rg">RG</Label>
+            <Input
+              id="rg"
+              value={client.rg || ''}
+              onChange={(e) => setClient({ ...client, rg: e.target.value })}
+              placeholder="00.000.000-0"
+            />
+          </div>
+          <div>
+            <Label htmlFor="birth_date">Data de Nascimento</Label>
+            <Input
+              id="birth_date"
+              type="date"
+              value={client.birth_date || ''}
+              onChange={(e) => setClient({ ...client, birth_date: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label htmlFor="pis">PIS</Label>
+            <Input
+              id="pis"
+              value={client.pis || ''}
+              onChange={(e) => setClient({ ...client, pis: e.target.value })}
+              placeholder="000.00000.00-0"
             />
           </div>
           <div>

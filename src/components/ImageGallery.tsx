@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button';
 interface ImageGalleryProps {
   images?: string[] | null;
   mainImage: string;
+  onImageLoadError?: (imageUrl: string) => void;
 }
 
-const ImageGallery: React.FC<ImageGalleryProps> = ({ images = [], mainImage }) => {
+const ImageGallery: React.FC<ImageGalleryProps> = (props) => {
+  const { images = [], mainImage, onImageLoadError } = props;
   // Garante que images seja um array e filtra valores vazios/nulos
   const safeImages = useMemo(() => {
     try {
@@ -27,6 +29,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images = [], mainImage }) =
       
       // Adiciona a imagem principal primeiro, se existir
       if (mainImage && typeof mainImage === 'string' && mainImage.trim() !== '') {
+        // Se for uma URL remota que falhou ao carregar, tenta converter para base64
         uniqueImages.add(mainImage);
       }
       
@@ -43,6 +46,29 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images = [], mainImage }) =
       return [];
     }
   }, [mainImage, safeImages]);
+  
+  // Função para lidar com erros de carregamento de imagem
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>, imageUrl: string) => {
+    try {
+      console.error('Erro ao carregar a imagem:', imageUrl);
+      const target = e.target as HTMLImageElement;
+      
+      // Se a imagem não for base64 e não conseguir carregar, chama o callback se existir
+      if (!imageUrl.startsWith('data:image') && !imageUrl.startsWith('blob:')) {
+        if (onImageLoadError) {
+          onImageLoadError(imageUrl);
+        }
+      }
+      
+      // Define uma imagem de fallback
+      target.onerror = null; // Previne loops de erro
+      target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2Q0ZDRkNCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxyZWN0IHg9IjMiIHk9IjMiIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgcng9IjIiIHJ5PSIyIj48L3JlY3Q+PGNpcmNsZSBjeD0iOC41IiBjeT0iOC41IiByPSIxLjUiPjwvY2lyY2xlPjxwb2x5bGluZSBwb2ludHM9IjIxIDE1IDE2IDEwIDUgMjEiPjwvcG9seWxpbmU+PC9zdmc+';
+    } catch (error) {
+      console.error('Erro ao processar falha no carregamento da imagem:', error);
+    }
+  };
+  
+  // onImageLoadError já está disponível via desestruturação das props
   
   // Se não houver imagens, retorna uma mensagem
   if (allImages.length === 0) {
@@ -134,11 +160,15 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images = [], mainImage }) =
                 className="aspect-square cursor-pointer"
                 onClick={() => openModal(index + 1)}
               >
-                <img 
-                  src={image} 
-                  alt={`Imagem ${index + 1}`} 
-                  className="w-full h-full object-cover rounded-md"
-                />
+                <div className="w-full h-full relative">
+                  <img 
+                    src={image} 
+                    alt={`Imagem ${index + 1}`} 
+                    className="w-full h-full object-cover rounded-md"
+                    onError={(e) => handleImageError(e, image)}
+                    loading="lazy"
+                  />
+                </div>
               </div>
             ))}
             {allImages.length > 6 && (
@@ -146,11 +176,16 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({ images = [], mainImage }) =
                 className="aspect-square cursor-pointer relative"
                 onClick={() => openModal(5)}
               >
-                <img 
-                  src={allImages[5]} 
-                  alt={`Imagem 5`} 
-                  className="w-full h-full object-cover rounded-md opacity-70"
-                />
+                <div className="w-full h-full relative">
+                  <img 
+                    src={allImages[0]} 
+                    alt="Imagem principal do imóvel" 
+                    className="w-full h-full object-cover rounded-lg cursor-zoom-in"
+                    onClick={() => openModal(0)}
+                    onError={(e) => handleImageError(e, allImages[0])}
+                    loading="lazy"
+                  />
+                </div>
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white rounded-md">
                   +{allImages.length - 5}
                 </div>

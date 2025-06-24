@@ -55,7 +55,6 @@ const EditProperty = () => {
 
         if (error) throw error;
         
-        // Garante que status e vendido sejam booleanos e inicializa as mídias
         const propertyData = {
           ...data,
           status: Boolean(data.status),
@@ -67,39 +66,83 @@ const EditProperty = () => {
         
         setProperty(propertyData);
         
-        // Prepara as mídias iniciais
         const initialMedias: MediaItem[] = [];
         
-        // Adiciona a imagem principal se existir
+        // Adiciona a imagem principal
         if (propertyData.image_url) {
-          initialMedias.push({
-            url: propertyData.image_url,
-            type: 'image',
-            isNew: false
+          initialMedias.push({ 
+            url: propertyData.image_url, 
+            type: 'image', 
+            isNew: false 
           });
         }
         
-        // Adiciona mídias adicionais
+        // Adiciona mídias adicionais do campo additional_media
         if (Array.isArray(propertyData.additional_media)) {
           propertyData.additional_media.forEach(media => {
             if (media.url && media.type) {
-              initialMedias.push({
-                url: media.url,
-                type: media.type,
-                isNew: false
+              // Se for uma URL remota, verifica se é uma imagem para converter
+              if (media.type === 'image' && !media.url.startsWith('data:image')) {
+                // Se for uma URL remota, converte para base64
+                fetch(media.url)
+                  .then(response => response.blob())
+                  .then(blob => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                      const base64data = reader.result as string;
+                      // Atualiza a URL para a versão base64
+                      media.url = base64data;
+                      // Atualiza o estado com a nova URL
+                      setMedias(prev => [
+                        ...prev.filter(m => m.url !== media.url),
+                        { url: base64data, type: 'image', isNew: false }
+                      ]);
+                    };
+                    reader.readAsDataURL(blob);
+                  })
+                  .catch(error => {
+                    console.error('Erro ao converter imagem remota:', error);
+                  });
+              }
+              
+              initialMedias.push({ 
+                url: media.url, 
+                type: media.type, 
+                isNew: false 
               });
             }
           });
         }
         
-        // Adiciona imagens adicionais antigas (para compatibilidade)
+        // Adiciona imagens adicionais do campo legado additional_images
         if (Array.isArray(propertyData.additional_images)) {
           propertyData.additional_images.forEach(url => {
             if (url && !initialMedias.some(m => m.url === url)) {
-              initialMedias.push({
-                url,
-                type: 'image',
-                isNew: false
+              // Se for uma URL remota, converte para base64
+              if (!url.startsWith('data:image')) {
+                fetch(url)
+                  .then(response => response.blob())
+                  .then(blob => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                      const base64data = reader.result as string;
+                      // Atualiza o estado com a nova URL
+                      setMedias(prev => [
+                        ...prev.filter(m => m.url !== url),
+                        { url: base64data, type: 'image', isNew: false }
+                      ]);
+                    };
+                    reader.readAsDataURL(blob);
+                  })
+                  .catch(error => {
+                    console.error('Erro ao converter imagem remota:', error);
+                  });
+              }
+              
+              initialMedias.push({ 
+                url, 
+                type: 'image', 
+                isNew: false 
               });
             }
           });
@@ -182,27 +225,44 @@ const EditProperty = () => {
     
     for (const media of newMedias) {
       try {
-        const timestamp = Date.now();
-        const randomId = Math.random().toString(36).substring(2, 7);
-        const fileExt = media.file!.name.split('.').pop();
-        const filePath = `properties/${timestamp}-${randomId}.${fileExt}`;
-        
-        const { data, error } = await supabase.storage
-          .from('properties')
-          .upload(filePath, media.file!);
-        
-        if (error) throw error;
-        
-        const publicUrl = supabase.storage
-          .from('properties')
-          .getPublicUrl(data.path).data.publicUrl;
-        
-        uploadedMedias.push({
-          url: publicUrl,
-          type: media.type
-        });
+        // Se for uma imagem, converte para base64 para armazenamento local
+        if (media.file && media.type === 'image') {
+          const reader = new FileReader();
+          
+          const base64Data = await new Promise<string>((resolve, reject) => {
+            reader.onload = (event) => resolve(event.target?.result as string);
+            reader.onerror = (error) => reject(error);
+            reader.readAsDataURL(media.file!);
+          });
+          
+          uploadedMedias.push({
+            url: base64Data,
+            type: 'image'
+          });
+        } else if (media.file) {
+          // Para vídeos, continua usando o armazenamento remoto
+          const timestamp = Date.now();
+          const randomId = Math.random().toString(36).substring(2, 7);
+          const fileExt = media.file.name.split('.').pop();
+          const filePath = `properties/${timestamp}-${randomId}.${fileExt}`;
+          
+          const { data, error } = await supabase.storage
+            .from('properties')
+            .upload(filePath, media.file);
+          
+          if (error) throw error;
+          
+          const publicUrl = supabase.storage
+            .from('properties')
+            .getPublicUrl(data.path).data.publicUrl;
+          
+          uploadedMedias.push({
+            url: publicUrl,
+            type: 'video'
+          });
+        }
       } catch (error) {
-        console.error('Erro ao fazer upload da mídia:', error);
+        console.error('Erro ao processar a mídia:', error);
         throw error;
       }
     }

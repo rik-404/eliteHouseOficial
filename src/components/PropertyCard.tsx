@@ -25,11 +25,13 @@ export type PropertyType = {
   images?: string[];
   additional_images?: string[]; // Campo legado para compatibilidade
   additional_media?: MediaItem[]; // Novo campo para mídias adicionais (imagens e vídeos)
-  type: 'Apartamento' | 'Casa' | 'Cobertura' | 'Terreno';
+  type: 'Apartamento' | 'Casa' | 'Cobertura' | 'Terreno' | string;
   featured?: boolean;
   description?: string;
   status?: boolean;
   vendido?: boolean;
+  created_at?: string;
+  updated_at?: string;
 };
 
 interface PropertyCardProps {

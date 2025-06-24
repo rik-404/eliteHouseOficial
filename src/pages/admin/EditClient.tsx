@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Client } from '@/types/client';
+
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
@@ -25,9 +26,7 @@ interface ViaCEPResponse {
   erro?: boolean;
 }
 
-type ClientStatus = 'Novo' | 'Atendimento' | 'Análise documental' | 'Análise bancária' | 'Aprovado' | 'Condicionado' | 'Reprovado' | 'Venda realizada' | 'Distrato';
-
-
+type ClientStatus = Client['status'];
 
 const EditClient = () => {
   const { user } = useAuth();
@@ -45,6 +44,32 @@ const EditClient = () => {
   const [isEditSectionMinimized, setIsEditSectionMinimized] = useState(true);
   const [isDocumentsSectionMinimized, setIsDocumentsSectionMinimized] = useState(true);
   const [isAppointmentsSectionMinimized, setIsAppointmentsSectionMinimized] = useState(true);
+
+  const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+    const cep = e.target.value.replace(/\D/g, '');
+    if (cep.length !== 8) return;
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data: ViaCEPResponse = await response.json();
+
+      if (data.erro) {
+        console.error('CEP não encontrado');
+        return;
+      }
+
+      setClient(prev => ({
+        ...prev!,
+        cep: data.cep,
+        street: data.logradouro,
+        neighborhood: data.bairro,
+        city: data.localidade,
+        state: data.uf
+      }));
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error);
+    }
+  };
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -155,57 +180,119 @@ const EditClient = () => {
     }
   };
 
+  // Função para formatar CPF
+  const formatCPF = (cpf: string) => {
+    return cpf.replace(/\D/g, '')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  };
+
+  // Função para formatar PIS
+  const formatPIS = (pis: string) => {
+    return pis.replace(/\D/g, '')
+      .replace(/^(\d{3})(\d{5})(\d{2})(\d{1})$/, '$1.$2.$3-$4');
+  };
+
+  // Função para formatar RG
+  const formatRG = (rg: string) => {
+    // Remove tudo que não for dígito
+    const value = rg.replace(/\D/g, '');
+    
+    // Verifica se tem o dígito verificador (último dígito pode ser X)
+    if (value.length <= 2) return value;
+    
+    // Formatação: XX.XXX.XXX-X
+    return value
+      .replace(/^(\d{2})(\d{3})(\d{3})([0-9Xx])$/, '$1.$2.$3-$4')
+      .toUpperCase();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    setLoading(true);
+    setError(null);
+
+    if (!client) {
+      setError('Cliente não encontrado');
+      setLoading(false);
+      return;
+    }
 
     try {
+      // Formatar CPF, RG e PIS antes de enviar, garantindo que sejam strings
+      const formattedClient = {
+        ...client,
+        cpf: client.cpf && typeof client.cpf === 'string' ? formatCPF(client.cpf) : client.cpf || null,
+        rg: client.rg && typeof client.rg === 'string' ? formatRG(client.rg) : client.rg || null,
+        pis: client.pis && typeof client.pis === 'string' ? formatPIS(client.pis) : client.pis || null,
+        // Garante que birth_date seja uma string de data válida ou null
+        birth_date: client.birth_date ? new Date(client.birth_date).toISOString() : null,
+        updated_at: new Date().toISOString()
+      };
+      
+      // Atualiza o estado local com os dados formatados
+      setClient(formattedClient);
+
       // Validar campos obrigatórios
-      if (!client?.name) throw new Error('Nome é obrigatório');
-      if (!client?.phone) throw new Error('Telefone é obrigatório');
-      if (!client?.broker_id) throw new Error('Corretor é obrigatório');
-      if (!client?.status) throw new Error('Status é obrigatório');
+      if (!formattedClient.name) throw new Error('Nome é obrigatório');
+      if (!formattedClient.phone) throw new Error('Telefone é obrigatório');
+      if (!formattedClient.broker_id) throw new Error('Corretor é obrigatório');
+      if (!formattedClient.status) throw new Error('Status é obrigatório');
 
       // Verificar permissões antes de salvar
-      if (user?.role === 'corretor' && (client.status === 'Análise bancária' || client.status === 'Aprovado' || client.status === 'Condicionado' || client.status === 'Reprovado')) {
+      if (user?.role === 'corretor' && (formattedClient.status === 'Análise bancária' || formattedClient.status === 'Aprovado' || formattedClient.status === 'Condicionado' || formattedClient.status === 'Reprovado')) {
         setError('Você não tem permissão para editar este cliente nesse status');
         setLoading(false);
         return;
       }
 
-      setLoading(true);
-      setError(null);
+      console.log('Dados a serem enviados:', formattedClient);
 
       const { data, error } = await supabase
         .from('clients')
         .update({
-          name: client.name,
-          cpf: client.cpf,
-          email: client.email,
-          phone: client.phone,
-          cep: client.cep || null,
-          street: client.street || null,
-          number: client.number || null,
-          neighborhood: client.neighborhood || null,
-          city: client.city || null,
-          state: client.state || null,
-          complement: client.complement || null,
-          broker_id: client.broker_id,
-          status: client.status,
-          notes: client.notes,
-          origin: client.origin || null,
-          scheduling: client.scheduling || null
+          name: formattedClient.name,
+          cpf: formattedClient.cpf,
+          rg: formattedClient.rg,
+          pis: formattedClient.pis,
+          birth_date: formattedClient.birth_date,
+          email: formattedClient.email,
+          phone: formattedClient.phone,
+          cep: formattedClient.cep || null,
+          street: formattedClient.street || null,
+          number: formattedClient.number || null,
+          neighborhood: formattedClient.neighborhood || null,
+          city: formattedClient.city || null,
+          state: formattedClient.state || null,
+          complement: formattedClient.complement || null,
+          broker_id: formattedClient.broker_id,
+          status: formattedClient.status,
+          notes: formattedClient.notes,
+          origin: formattedClient.origin || null,
+          scheduling: formattedClient.scheduling || null,
+          updated_at: new Date().toISOString()
         })
-        .eq('id', client.id)
+        .eq('id', formattedClient.id)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro do Supabase:', error);
+        throw error;
+      }
 
-      navigate('/admin/clients');
+      console.log('Resposta do servidor:', data);
+      
+      // Atualiza os dados do cliente localmente com a resposta do servidor
+      setClient(data);
+      
+      // Exibe mensagem de sucesso
+      alert('Cliente atualizado com sucesso!');
+      
     } catch (err) {
       console.error('Erro ao atualizar cliente:', err);
-      setError('Erro ao atualizar cliente. Por favor, tente novamente.');
+      setError(`Erro ao atualizar cliente: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
     } finally {
       setLoading(false);
     }
@@ -260,207 +347,204 @@ const EditClient = () => {
       )}
 
       <Card className="relative">
-        {/* Removida a mensagem de seção de edição minimizada */}
-        <CardHeader className={isEditSectionMinimized ? 'pb-2' : ''}>
+        <CardHeader>
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-4">
-              <CardTitle className={isEditSectionMinimized ? 'opacity-50' : ''}>Editar Cliente</CardTitle>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsEditSectionMinimized(!isEditSectionMinimized)}
-                className="text-sm text-muted-foreground hover:text-foreground"
-              >
-                {isEditSectionMinimized ? (
-                  <>
-                    <ChevronDown className="h-4 w-4 mr-1" />
-                    Mostrar
-                  </>
-                ) : (
-                  <>
-                    <ChevronUp className="h-4 w-4 mr-1" />
-                    Ocultar
-                  </>
-                )}
-              </Button>
-            </div>
-            {/* Botão Voltar movido para o topo da página */}
+            <CardTitle>Editar Cliente</CardTitle>
           </div>
         </CardHeader>
-        <CardContent className={isEditSectionMinimized ? 'hidden' : ''}>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Linha 1: Dados Pessoais e Contato */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Coluna 1: Dados Pessoais */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Dados Pessoais</h3>
+                <div className="space-y-4">
                   <div>
-                    <Label htmlFor="name">Nome <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="name">Nome Completo <span className="text-red-500">*</span></Label>
                     <Input
                       id="name"
                       value={client.name}
                       onChange={(e) => setClient({ ...client, name: e.target.value })}
+                      required
+                    />
+                  </div>
 
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="cpf">CPF</Label>
+                      <Input
+                        id="cpf"
+                        value={client.cpf || ''}
+                        onChange={(e) => setClient({ ...client, cpf: e.target.value })}
+                        placeholder="000.000.000-00"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="rg">RG</Label>
+                      <Input
+                        id="rg"
+                        value={client.rg || ''}
+                        onChange={(e) => setClient({ ...client, rg: e.target.value })}
+                        placeholder="00.000.000-0"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="birth_date">Data Nasc.</Label>
+                      <Input
+                        type="date"
+                        id="birth_date"
+                        value={client.birth_date ? new Date(client.birth_date).toISOString().split('T')[0] : ''}
+                        onChange={(e) => {
+                          // Converte a data para o formato ISO antes de salvar
+                          const dateValue = e.target.value ? new Date(e.target.value).toISOString() : null;
+                          setClient({ ...client, birth_date: dateValue });
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="pis">PIS</Label>
+                      <Input
+                        id="pis"
+                        value={client.pis || ''}
+                        onChange={(e) => setClient({ ...client, pis: e.target.value })}
+                        placeholder="000.00000.00-0"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Coluna 2: Contato */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Contato</h3>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="email">E-mail</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={client.email || ''}
+                      onChange={(e) => setClient({ ...client, email: e.target.value })}
+                      placeholder="seu@email.com"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="cpf">CPF (opcional)</Label>
+                    <Label htmlFor="phone">Telefone <span className="text-red-500">*</span></Label>
                     <Input
-                      id="cpf"
-                      value={client.cpf || ''}
-                      onChange={(e) => setClient({ ...client, cpf: e.target.value })}
+                      id="phone"
+                      value={client.phone}
+                      onChange={(e) => setClient({ ...client, phone: e.target.value })}
+                      placeholder="(00) 00000-0000"
+                      required
                     />
                   </div>
                 </div>
               </div>
-              <div>
-                <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={client.email}
-                  onChange={(e) => setClient({ ...client, email: e.target.value })}
+            </div>
 
-                />
-              </div>
-              <div>
-                <Label htmlFor="phone">Telefone <span className="text-red-500">*</span></Label>
-                <Input
-                  id="phone"
-                  value={client.phone}
-                  onChange={(e) => setClient({ ...client, phone: e.target.value })}
-
-                />
-              </div>
-              <div>
-                <Label htmlFor="broker_id">Corretor <span className="text-red-500">*</span></Label>
-                {user?.role === 'corretor' ? (
-                  <div className="text-gray-500">
-                    Corretor: {user?.name || user?.username}
-                  </div>
-                ) : (
-                  <Select
-                    value={client.broker_id}
-                    onValueChange={(value) => setClient({ ...client, broker_id: value })}
-  
-                    disabled={loading || noBrokers}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={loading ? 'Carregando corretores...' : noBrokers ? 'Nenhum corretor encontrado' : 'Selecionar corretor'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {brokers.map((broker) => (
-                        <SelectItem key={broker.id} value={broker.broker_id}>
-                          {broker.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                {noBrokers && (
-                  <p className="mt-2 text-sm text-red-500">
-                    Por favor, cadastre um corretor primeiro
-                  </p>
-                )}
+            {/* Seção de Endereço */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">Endereço</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="cep">CEP</Label>
+                  <Input
+                    id="cep"
+                    value={client.cep || ''}
+                    onChange={(e) => setClient({ ...client, cep: e.target.value })}
+                    onBlur={handleCepBlur}
+                    placeholder="00000-000"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="street">Rua</Label>
+                  <Input
+                    id="street"
+                    value={client.street || ''}
+                    onChange={(e) => setClient({ ...client, street: e.target.value })}
+                    placeholder="Nome da rua"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="number">Número</Label>
+                  <Input
+                    id="number"
+                    value={client.number || ''}
+                    onChange={(e) => setClient({ ...client, number: e.target.value })}
+                    placeholder="123"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="complement">Complemento</Label>
+                  <Input
+                    id="complement"
+                    value={client.complement || ''}
+                    onChange={(e) => setClient({ ...client, complement: e.target.value })}
+                    placeholder="Apto, bloco, etc."
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="neighborhood">Bairro</Label>
+                  <Input
+                    id="neighborhood"
+                    value={client.neighborhood || ''}
+                    onChange={(e) => setClient({ ...client, neighborhood: e.target.value })}
+                    placeholder="Bairro"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="city">Cidade</Label>
+                  <Input
+                    id="city"
+                    value={client.city || ''}
+                    onChange={(e) => setClient({ ...client, city: e.target.value })}
+                    placeholder="Cidade"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="state">UF</Label>
+                  <Input
+                    id="state"
+                    value={client.state || ''}
+                    onChange={(e) => setClient({ ...client, state: e.target.value })}
+                    placeholder="UF"
+                    maxLength={2}
+                  />
+                </div>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="cep">CEP (Opcional)</Label>
-                <Input
-                  id="cep"
-                  value={client?.cep || ''}
-                  onChange={handleCEPChange}
-                  placeholder="Digite o CEP (apenas números)"
-                />
-              </div>
-              <div>
-                <Label htmlFor="street">Rua (Opcional)</Label>
-                <Input
-                  id="street"
-                  value={client?.street || ''}
-                  onChange={(e) => setClient(prev => prev ? { ...prev, street: e.target.value } : null)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="number">Número (Opcional)</Label>
-                <Input
-                  id="number"
-                  value={client?.number || ''}
-                  onChange={(e) => setClient(prev => prev ? { ...prev, number: e.target.value } : null)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="neighborhood">Bairro (Opcional)</Label>
-                <Input
-                  id="neighborhood"
-                  value={client?.neighborhood || ''}
-                  onChange={(e) => setClient(prev => prev ? { ...prev, neighborhood: e.target.value } : null)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="origin">Origem (Opcional)</Label>
-                <Input
-                  id="origin"
-                  value={client?.origin || ''}
-                  onChange={(e) => setClient(prev => prev ? { ...prev, origin: e.target.value } : null)}
-                  placeholder="Ex: Site, Indicação, etc."
-                />
-              </div>
-              <div>
-                <div className="space-y-2">
-                  <Label htmlFor="scheduling">Status do Agendamento</Label>
+
+            {/* Seção de Status e Observações */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Status</h3>
+                <div className="space-y-4">
                   <Select
-                    value={client?.scheduling || ''}
-                    onValueChange={(value) => {
-                      setClient(prev => prev ? { 
-                        ...prev, 
-                        scheduling: value as 'Aguardando' | 'Não realizada' | 'Realizada' | null 
-                      } : null);
-                    }}
+                    value={client.status}
+                    onValueChange={(value) => setClient({ ...client, status: value as ClientStatus })}
+                    disabled={user?.role === 'corretor' && (client.status === 'Análise bancária' || client.status === 'Aprovado' || client.status === 'Condicionado' || client.status === 'Reprovado')}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Aguardando">Aguardando</SelectItem>
-                      <SelectItem value="Não realizada">Não realizada</SelectItem>
-                      <SelectItem value="Realizada">Realizada</SelectItem>
+                      <SelectItem value="Novo">Novo</SelectItem>
+                      <SelectItem value="Atendimento">Atendimento</SelectItem>
+                      <SelectItem value="Análise documental">Análise documental</SelectItem>
+                      <SelectItem value="Análise bancária">Análise bancária</SelectItem>
+                      <SelectItem value="Aprovado">Aprovado</SelectItem>
+                      <SelectItem value="Condicionado">Condicionado</SelectItem>
+                      <SelectItem value="Reprovado">Reprovado</SelectItem>
+                      <SelectItem value="Venda realizada">Venda realizada</SelectItem>
+                      <SelectItem value="Distrato">Distrato</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              <div>
-                <Label htmlFor="complement">Complemento (Opcional)</Label>
-                <Input
-                  id="complement"
-                  value={client?.complement || ''}
-                  onChange={(e) => setClient(prev => prev ? { ...prev, complement: e.target.value } : null)}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="status">Status</Label>
-                <Select
-                  value={client.status}
-                  onValueChange={(value) => setClient({ ...client, status: value as ClientStatus })}
-                  disabled={user?.role === 'corretor' && (client.status === 'Análise bancária' || client.status === 'Aprovado' || client.status === 'Condicionado' || client.status === 'Reprovado')}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Novo">Novo</SelectItem>
-                    <SelectItem value="Atendimento">Atendimento</SelectItem>
-                    <SelectItem value="Análise documental">Análise documental</SelectItem>
-                    <SelectItem value="Análise bancária">Análise bancária</SelectItem>
-                    <SelectItem value="Aprovado">Aprovado</SelectItem>
-                    <SelectItem value="Condicionado">Condicionado</SelectItem>
-                    <SelectItem value="Reprovado">Reprovado</SelectItem>
-                    <SelectItem value="Venda realizada">Venda realizada</SelectItem>
-                    <SelectItem value="Distrato">Distrato</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
               <div className="space-y-4">
                 <div>

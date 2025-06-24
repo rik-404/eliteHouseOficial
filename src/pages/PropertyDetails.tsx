@@ -2,21 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import Navbar from '@/components/Navbar';
-import { Square, Bed, Bath, Car } from 'lucide-react';
+import { Square, Bed, Bath, Car, Video, Youtube } from 'lucide-react';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import ImageGallery from '@/components/ImageGallery';
 import ModalContact from '@/components/ModalContact';
 import { supabase } from '@/lib/supabase';
 import { PropertyType } from '@/components/PropertyCard';
 import { useToast } from '@/hooks/use-toast';
+
+type PropertyMedia = {
+  url: string;
+  type: 'image' | 'video' | 'youtube';
+  thumbnail?: string;
+};
 
 const PropertyDetails = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const [property, setProperty] = useState<PropertyType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedMedia, setSelectedMedia] = useState<PropertyMedia | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -47,6 +53,27 @@ const PropertyDetails = () => {
           // Redirecionar para a página de imóveis
           window.location.href = '/properties';
           return;
+        }
+        
+        // Definir mídia selecionada inicial (imagem principal ou primeiro vídeo)
+        if (data.additional_media && data.additional_media.length > 0) {
+          const firstVideo = data.additional_media.find((m: any) => m.type === 'youtube' || m.type === 'video');
+          if (firstVideo) {
+            setSelectedMedia({
+              url: firstVideo.url,
+              type: firstVideo.type
+            });
+          } else if (data.image_url) {
+            setSelectedMedia({
+              url: data.image_url,
+              type: 'image'
+            });
+          }
+        } else if (data.image_url) {
+          setSelectedMedia({
+            url: data.image_url,
+            type: 'image'
+          });
         }
         
         setProperty(data);
@@ -91,6 +118,37 @@ const PropertyDetails = () => {
     maximumFractionDigits: 0,
   }).format(property.price);
 
+  // Extrair o ID do vídeo do YouTube da URL
+  const extractYoutubeId = (url: string): string | null => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  const handleMediaClick = (media: PropertyMedia) => {
+    setSelectedMedia(media);
+  };
+
+  // Obter todas as mídias (imagens e vídeos) para a galeria
+  const allMedias = [
+    { url: property.image_url, type: 'image' as const },
+    ...(Array.isArray(property.additional_images) 
+      ? property.additional_images.map((url: string) => ({ 
+          url, 
+          type: 'image' as const 
+        })) 
+      : []),
+    ...(Array.isArray(property.additional_media) 
+      ? property.additional_media.map((m: any) => ({
+          url: m.url,
+          type: m.type,
+          thumbnail: m.type === 'youtube' 
+            ? `https://img.youtube.com/vi/${extractYoutubeId(m.url)}/hqdefault.jpg` 
+            : m.url
+        })) 
+      : [])
+  ].filter(m => m.url && typeof m.url === 'string');
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -99,27 +157,96 @@ const PropertyDetails = () => {
         {/* Título do imóvel destacado */}
         <h1 className="text-4xl font-bold mb-10 text-center text-eliteOrange drop-shadow-sm">{property.title}</h1>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Galeria de Imagens */}
+          {/* Galeria de Mídias */}
           <div>
-            <ImageGallery 
-              mainImage={property.image_url} 
-              images={[
-                ...(property.additional_images || []),
-                ...(property.additional_media?.filter((m: any) => m.type === 'image').map((m: any) => m.url) || [])
-              ]} 
-            />
-            
-            {/* Badges */}
-            <div className="absolute top-4 left-4">
-              <Badge className="bg-eliteOrange text-white">
-                {property.type}
-              </Badge>
-              {property.featured && (
-                <Badge className="ml-2 bg-white/80 text-eliteBlue">
-                  Destaque
-                </Badge>
+            {/* Mídia principal */}
+            <div className="relative mb-4 rounded-lg overflow-hidden bg-black/5 aspect-video">
+              {selectedMedia?.type === 'youtube' ? (
+                <div className="w-full h-full">
+                  <iframe
+                    className="w-full h-full"
+                    src={`https://www.youtube.com/embed/${extractYoutubeId(selectedMedia.url)}?autoplay=1&mute=1`}
+                    title="Vídeo do imóvel"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  ></iframe>
+                </div>
+              ) : selectedMedia?.type === 'video' ? (
+                <video 
+                  src={selectedMedia.url} 
+                  className="w-full h-full object-cover"
+                  controls
+                  autoPlay
+                  muted
+                />
+              ) : (
+                <img
+                  src={selectedMedia?.url || property.image_url || '/placeholder.jpg'}
+                  alt={property.title}
+                  className="w-full h-full object-cover"
+                />
               )}
+              
+              {/* Badges */}
+              <div className="absolute top-4 left-4">
+                <Badge className="bg-eliteOrange text-white">
+                  {property.type}
+                </Badge>
+                {property.featured && (
+                  <Badge className="ml-2 bg-white/80 text-eliteBlue">
+                    Destaque
+                  </Badge>
+                )}
+              </div>
             </div>
+            
+            {/* Miniaturas das mídias */}
+            {allMedias.length > 1 && (
+              <div className="grid grid-cols-4 gap-2 mt-2">
+                {allMedias.map((media, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleMediaClick(media)}
+                    className={`relative aspect-square rounded-md overflow-hidden ${selectedMedia?.url === media.url ? 'ring-2 ring-eliteOrange' : ''}`}
+                  >
+                    {media.type === 'youtube' ? (
+                      <div className="relative w-full h-full">
+                        <img
+                          src={`https://img.youtube.com/vi/${extractYoutubeId(media.url)}/hqdefault.jpg`}
+                          alt="Miniatura do YouTube"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                          <Youtube className="h-6 w-6 text-red-500" />
+                        </div>
+                      </div>
+                    ) : media.type === 'video' ? (
+                      <div className="relative w-full h-full">
+                        <video 
+                          src={media.url} 
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                          <Video className="h-6 w-6 text-white" />
+                        </div>
+                      </div>
+                    ) : (
+                      <img
+                        src={media.url}
+                        alt={`Mídia ${index + 1}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Tratamento de erro para imagens que não carregam
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/placeholder.jpg';
+                        }}
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Localização */}
             <div className="mt-6 p-6 bg-white/80 rounded-lg border border-gray-200">

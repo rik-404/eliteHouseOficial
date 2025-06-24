@@ -4,6 +4,9 @@ export interface Client {
   email: string;
   phone: string;
   cpf?: string | null;
+  rg?: string | null;
+  birth_date?: string | null;
+  pis?: string | null;
   cep?: string | null;
   street?: string | null;
   number?: string | null;
