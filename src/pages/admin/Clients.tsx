@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
+import { usePendingCount } from '@/hooks/usePendingCount';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, SquareKanban, List, User, Trash, Plus, Bell } from 'lucide-react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/TempAuthContext';
 import { Client } from '../../types/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -16,8 +17,23 @@ import ClientKanban from '@/components/admin/ClientKanban';
 import AssignBrokerModal from '@/components/admin/AssignBrokerModal';
 import { useActivityLog } from '@/hooks/useActivityLog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { playNotificationSound } from '@/utils/notificationSound';
+import { useClientNotifications } from '@/hooks/useClientNotifications';
 
+// Hook para notificações na tela
+export const useNotification = () => {
+  const [notification, setNotification] = useState<{message: string; type: 'success' | 'error' | 'info'} | null>(null);
+  
+  const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setNotification({ message, type });
+    
+    // Remove a notificação após 5 segundos
+    setTimeout(() => {
+      setNotification(null);
+    }, 5000);
+  };
+  
+  return { notification, showNotification };
+};
 
 const statusColors = {
   'Novo': '#0096FF',
@@ -37,8 +53,31 @@ const getStatusColor = (status: string) => {
 
 const Clients = () => {
   const [clients, setClients] = useState<Client[]>([]);
-
   const [selectedBroker, setSelectedBroker] = useState<string | null>(null);
+  const [brokers, setBrokers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { 
+    pendingCount, 
+    loading: pendingLoading 
+  } = usePendingCount();
+  const { notification } = useNotification();
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+  const [assignBrokerOpen, setAssignBrokerOpen] = useState(false);
+  const [clientToAssign, setClientToAssign] = useState<Client | null>(null);
+  const [isKanbanView, setIsKanbanView] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const notificationSound = useRef<HTMLAudioElement | null>(null);
+
+  // Função para verificar se o usuário pode ver pendentes
+  const canViewPendentes = (user: any) => {
+    return user?.role === 'admin' || user?.role === 'dev';
+  };
 
   // Função para verificar se o usuário é corretor e encontrar seu broker_id
   const getBrokerFilter = (user: any) => {
@@ -47,65 +86,64 @@ const Clients = () => {
     }
     return null;
   };
-  const [brokers, setBrokers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [pendingCount, setPendingCount] = useState(0);
-  const previousPendingCountRef = useRef(0);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
-  const [assignBrokerOpen, setAssignBrokerOpen] = useState(false);
-  const [clientToAssign, setClientToAssign] = useState<Client | null>(null);
-  const [isKanbanView, setIsKanbanView] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  const [searchParams] = useSearchParams();
 
-  const navigate = useNavigate();
-  const { user } = useAuth();
+  // Efeito para configurar notificações em tempo real
+  useEffect(() => {
+    // Carrega o som de notificação
+    notificationSound.current = new Audio('/sounds/notification.mp3');
+    notificationSound.current.load();
 
-  // Função para verificar se o usuário pode ver pendentes
-  const canViewPendentes = (user: any) => {
-    return user?.role === 'admin' || user?.role === 'dev';
-  };
+    // Configura a escuta em tempo real para novos clientes
+    const channel = supabase
+      .channel('new-clients-channel')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'clients',
+          filter: 'status=eq.pending'
+        },
+        async (payload) => {
+          console.log('Novo cliente pendente detectado:', payload.new);
+          
+          // Toca o som de notificação
+          if (notificationSound.current) {
+            try {
+              // Força o carregamento do áudio a cada notificação
+              await notificationSound.current.load();
+              notificationSound.current.currentTime = 0;
+              await notificationSound.current.play();
+              console.log('Notificação sonora reproduzida com sucesso');
+            } catch (e) {
+              console.error('Erro ao reproduzir notificação:', e);
+            }
+          }
+          
+          // Recarrega a lista de clientes
+          fetchClients();
+        }
+      )
+      .subscribe((status) => {
+        console.log('Status da inscrição no canal:', status);
+      });
 
-  // Função para alternar entre ver todos e ver pendentes
+    // Log para confirmar que o efeito foi executado
+    console.log('Escuta em tempo real configurada para novos clientes pendentes');
 
+    return () => {
+      // Limpa a escuta quando o componente é desmontado
+      channel.unsubscribe();
+      console.log('Escuta em tempo real encerrada');
+    };
+  }, []);
 
-
-
+  // Efeito para carregar os clientes iniciais
   useEffect(() => {
     if (user?.role === 'corretor') {
       setSelectedBroker(user.broker_id);
     }
     fetchClients();
-
-    // Configurar escuta em tempo real
-    const channel = supabase
-      .channel('clients-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'clients',
-        },
-        (payload) => {
-          console.log('Change received!', payload);
-          fetchClients();
-          
-          // Verifica se o evento é de inserção e o status é 'pending'
-          if (payload.eventType === 'INSERT' && payload.new?.status === 'pending') {
-            console.log('Novo cliente pendente detectado!');
-            playNotificationSound();
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      // Limpar a escuta quando o componente for desmontado
-      channel.unsubscribe();
-    };
   }, [user?.broker_id]);
 
   const checkScheduledVisits = async (clientId: string) => {
@@ -325,26 +363,6 @@ const Clients = () => {
         setBrokers(formattedBrokers);
       }
 
-      // Contar clientes pendentes (status 'pending')
-      const { data: pendingData } = await supabase
-        .from('clients')
-        .select('id')
-        .eq('status', 'pending');
-      
-      const newPendingCount = pendingData?.length || 0;
-      
-      // Verifica se o número de pendentes aumentou desde a última verificação
-      if (newPendingCount > previousPendingCountRef.current && previousPendingCountRef.current > 0) {
-        console.log(`Número de pendentes aumentou de ${previousPendingCountRef.current} para ${newPendingCount}`);
-        playNotificationSound();
-      }
-      
-      // Atualiza o contador e a referência
-      setPendingCount(newPendingCount);
-      previousPendingCountRef.current = newPendingCount;
-
-      // Iniciar a construção da query
-      console.log('Construindo query para buscar clientes...');
       let query = supabase
         .from('clients')
         .select('*')
@@ -869,43 +887,43 @@ const Clients = () => {
                             {user?.role === 'corretor' && (client.status === 'Análise bancária' || client.status === 'Aprovado' || client.status === 'Condicionado' || client.status === 'Reprovado') ? (
                                 <div className="text-red-500 text-sm">Não pode editar</div>
                               ) : client.status === 'pending' ? (
-                               <Button
-                                 variant="outline"
-                                 size="sm"
-                                 onClick={() => handleAssignBroker(client)}
-                                 className="w-full"
-                               >
-                                 <Plus className="w-4 h-4 mr-2" />
-                                 Atribuir ao Corretor
-                               </Button>
-                             ) : (
-                               <div className="flex gap-2">
-                                 <Button
-                                   variant="outline"
-                                   size="sm"
-                                   className={`bg-yellow-400 hover:bg-yellow-500 text-white border-none ${user?.role === 'corretor' && (client.status === 'Análise bancária' || client.status === 'Aprovado' || client.status === 'Condicionado' || client.status === 'Reprovado') ? 'cursor-not-allowed bg-gray-400 hover:bg-gray-400 text-gray-100' : ''}`}
-                                   onClick={() => {
-                                     if (user?.role === 'corretor' && (client.status === 'Análise bancária' || client.status === 'Aprovado' || client.status === 'Condicionado' || client.status === 'Reprovado')) {
-                                       return;
-                                     }
-                                     handleEditClient(client.id);
-                                   }}
-                                 >
-                                   <User className="w-4 h-4 mr-2" />
-                                   Perfil
-                                 </Button>
-                                 <Button
-                                   variant="destructive"
-                                   size="sm"
-                                   onClick={() => user?.role !== 'corretor' && handleDelete(client)}
-                                   disabled={user?.role === 'corretor'}
-                                   className={`cursor-not-allowed ${user?.role === 'corretor' ? 'bg-gray-400 hover:bg-gray-400 text-gray-100 border-gray-300' : ''}`}
-                                 >
-                                   <Trash className="w-4 h-4 mr-2" />
-                                   Excluir
-                                 </Button>
-                               </div>
-                             )}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleAssignBroker(client)}
+                                  className="w-full"
+                                >
+                                  <Plus className="w-4 h-4 mr-2" />
+                                  Atribuir ao Corretor
+                                </Button>
+                              ) : (
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className={`bg-yellow-400 hover:bg-yellow-500 text-white border-none ${user?.role === 'corretor' && (client.status === 'Análise bancária' || client.status === 'Aprovado' || client.status === 'Condicionado' || client.status === 'Reprovado') ? 'cursor-not-allowed bg-gray-400 hover:bg-gray-400 text-gray-100' : ''}`}
+                                    onClick={() => {
+                                      if (user?.role === 'corretor' && (client.status === 'Análise bancária' || client.status === 'Aprovado' || client.status === 'Condicionado' || client.status === 'Reprovado')) {
+                                        return;
+                                      }
+                                      handleEditClient(client.id);
+                                    }}
+                                  >
+                                    <User className="w-4 h-4 mr-2" />
+                                    Perfil
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => user?.role !== 'corretor' && handleDelete(client)}
+                                    disabled={user?.role === 'corretor'}
+                                    className={`cursor-not-allowed ${user?.role === 'corretor' ? 'bg-gray-400 hover:bg-gray-400 text-gray-100 border-gray-300' : ''}`}
+                                  >
+                                    <Trash className="w-4 h-4 mr-2" />
+                                    Excluir
+                                  </Button>
+                                </div>
+                              )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -917,31 +935,12 @@ const Clients = () => {
           )}
         </div>
       )}
+      
+
     </div>
   );
 };
 
+export { usePendingCount };
+
 export default Clients;
-
-// Função para obter o número de pendentes
-export const usePendingCount = () => {
-  const [count, setCount] = useState(0);
-
-  useEffect(() => {
-    const fetchPendingCount = async () => {
-      try {
-        const { data: pendingData } = await supabase
-          .from('clients')
-          .select('id')
-          .eq('status', 'pending');
-        setCount(pendingData?.length || 0);
-      } catch (error) {
-        console.error('Erro ao buscar pendentes:', error);
-      }
-    };
-
-    fetchPendingCount();
-  }, []);
-
-  return count;
-};

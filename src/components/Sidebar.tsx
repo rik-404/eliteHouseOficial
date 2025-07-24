@@ -21,6 +21,9 @@ export default function Sidebar({ pendingCount }: SidebarProps) {
           <Link to="/admin/contacts" className="flex items-center gap-2 p-3 hover:bg-gray-700 rounded text-white">
             Contatos
           </Link>
+          <Link to="/admin/schedule" className="flex items-center gap-2 p-3 hover:bg-gray-700 rounded text-white">
+            Agenda
+          </Link>
           <Link to="/admin/reports" className="flex items-center gap-2 p-3 hover:bg-gray-700 rounded text-white">
             Relatórios
           </Link>

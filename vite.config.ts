@@ -9,6 +9,23 @@ import { version as pkgVersion } from './package.json';
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   base: '/',
+  server: {
+    host: '0.0.0.0',
+    port: 8080,
+    strictPort: true,
+    https: false,
+    fs: {
+      allow: [__dirname]
+    },
+    hmr: {
+      host: 'localhost',
+      port: 8080,
+      protocol: 'ws'
+    },
+    proxy: {
+      // Configuração de proxy se necessário
+    }
+  },
   build: {
     // Gera um timestamp único para cada build
     rollupOptions: {
@@ -30,18 +47,6 @@ export default defineConfig(({ mode }) => ({
     manifest: true,
     // Garante que o HTML seja atualizado com os novos hashes
     emptyOutDir: true
-  },
-  server: {
-    host: "::",
-    port: 8080,
-    fs: {
-      allow: [__dirname]
-    },
-    hmr: {
-      host: "localhost",
-      port: 8080,
-      protocol: "ws"
-    }
   },
   define: {
     __APP_VERSION__: JSON.stringify(pkgVersion),

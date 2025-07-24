@@ -3,6 +3,7 @@ import type { Config } from "tailwindcss";
 
 export default {
 	darkMode: ["class"],
+	// Adicionando suporte a tema escuro baseado em classe
 	content: [
 		"./pages/**/*.{ts,tsx}",
 		"./components/**/*.{ts,tsx}",

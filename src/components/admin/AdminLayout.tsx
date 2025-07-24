@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import Footer from '@/components/layout/Footer';
-import { LayoutDashboard, MessageSquare, User, MoreVertical, LogOut, Users, Clock } from 'lucide-react';
-import { useNavigate, Link, Outlet } from 'react-router-dom';
+import { LayoutDashboard, MessageSquare, User, MoreVertical, LogOut, Users, Clock, Calendar, Sun, Moon } from 'lucide-react';
+import { useNavigate, Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useTheme } from 'next-themes';
 import { usePendingCount as useOriginalPendingCount } from '@/hooks/usePendingCount';
+import useInactivityReload from '@/hooks/useInactivityReload';
 
 // Função para obter o número de pendentes apenas para admin
 const usePendingCount = () => {
@@ -18,8 +20,11 @@ const usePendingCount = () => {
 import NotificationBadge from '@/components/NotificationBadge';
 
 const AdminLayout = () => {
+  // Configura o recarregamento automático após 5 minutos de inatividade
+  useInactivityReload(5 * 60 * 1000); // 5 minutos em milissegundos
   const navigate = useNavigate();
   const { user, confirmSignOut } = useAuth();
+  const { theme, setTheme } = useTheme();
   const { pendingCount, loading } = usePendingCount();
 
   const handleLogout = async () => {
@@ -36,9 +41,9 @@ const AdminLayout = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
       {/* Sidebar */}
-      <div className="w-64 bg-[#141424] text-white">
+      <div className="w-64 bg-[#141424] dark:bg-gray-800 text-white">
         <div className="flex flex-col items-center justify-center h-24 p-4">
           <img src="/icon.png" alt="Logo" className="h-12 w-auto" />
           <span className="text-white text-sm mt-2">ImobiFlow</span>
@@ -77,6 +82,12 @@ const AdminLayout = () => {
                 )}
               </Link>
             </li>
+            <li>
+              <Link to="/admin/schedule" className="flex items-center px-4 py-2 text-white hover:bg-[#242434] rounded transition-colors duration-200">
+                <Calendar className="w-4 h-4 mr-3" />
+                Agenda
+              </Link>
+            </li>
             {user?.role !== 'corretor' && (
               <li>
                 <Link to="/admin/logs" className="flex items-center px-4 py-2 text-white hover:bg-[#242434] rounded transition-colors duration-200">
@@ -91,17 +102,33 @@ const AdminLayout = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white shadow">
+        <header className="bg-white dark:bg-gray-800 shadow">
           <div className="flex items-center justify-between px-4 py-4 sm:px-6">
-            <h1 className="text-lg font-semibold text-gray-900">Painel Administrativo</h1>
+            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Painel Administrativo</h1>
             <div className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="px-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
+              >
+                {theme === 'dark' ? (
+                  <Sun className="h-5 w-5" />
+                ) : (
+                  <Moon className="h-5 w-5" />
+                )}
+                <span className="sr-only">
+                  {theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
+                </span>
+              </Button>
               <div className="flex items-center space-x-2">
                 <User className="h-4 w-4 text-gray-500" />
                 <div className="text-sm">
-                  <div className="font-medium text-gray-900">
+                  <div className="font-medium text-gray-900 dark:text-white">
                     {user?.name || user?.username}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
                     {user?.role}
                   </div>
                 </div>

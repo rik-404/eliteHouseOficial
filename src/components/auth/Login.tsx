@@ -6,11 +6,13 @@ import { Label } from '@/components/ui/label';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import CustomForm from '@/components/ui/CustomForm';
+import { Eye, EyeOff } from 'lucide-react';
 const Login = () => {
   const navigate = useNavigate();
   const { signIn } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -61,16 +63,31 @@ const Login = () => {
             />
           </div>
 
-          <div>
+          <div className="relative">
             <Label htmlFor="password" className="text-white">Senha</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={loading}
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white focus:outline-none"
+                tabIndex={-1}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            </div>
           </div>
 
           <Button
@@ -85,9 +102,10 @@ const Login = () => {
               Voltar para tela inicial
             </button>
           </div>
+          <div className="mt-8 text-center text-sm text-gray-400">
+            Versão 1.6.8
+          </div>
         </CustomForm>
-
-
       </div>
     </div>
   );

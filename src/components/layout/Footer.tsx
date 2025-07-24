@@ -7,22 +7,22 @@ const Footer = () => {
 
   return (
     <>
-      <footer className="mt-auto border-t border-gray-200 bg-white">
+      <footer className="mt-auto border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <div className="container mx-auto px-4 py-4">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="text-sm text-gray-700 font-semibold mb-2 md:mb-0">
+            <div className="text-sm text-gray-700 dark:text-gray-300 font-semibold mb-2 md:mb-0">
               ImobiFlow — Powered by Vendramini Informática | © {new Date().getFullYear()}
             </div>
             <div className="flex items-center space-x-6">
               <span className="text-sm text-gray-500">Versão {__APP_VERSION__}</span>
               <button 
-                className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
                 onClick={() => setShowTerms(true)}
               >
                 Termos de Uso
               </button>
               <button 
-                className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
                 onClick={() => setShowPrivacyPolicy(true)}
               >
                 Política de Privacidade
@@ -38,10 +38,10 @@ const Footer = () => {
           <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[80vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">Termos de Uso</h2>
+                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200">Termos de Uso</h2>
                 <button 
                   onClick={() => setShowTerms(false)}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

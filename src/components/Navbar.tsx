@@ -12,7 +12,7 @@ const Navbar = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-eliteBlue/95 backdrop-blur-sm border-b border-muted">
+    <header className="sticky top-0 z-40 w-full bg-eliteBlue/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-muted dark:border-gray-800">
       <div className="container-custom flex h-20 items-center justify-between">
         <div className="flex items-center">
           <Link to="/" className="flex items-center space-x-2">
@@ -26,16 +26,16 @@ const Navbar = () => {
 
         {/* Desktop Menu */}
         <nav className="hidden md:flex items-center gap-6">
-          <Link to="/" className="text-white hover:text-eliteOrange transition-colors">
+          <Link to="/" className="text-white dark:text-gray-200 hover:text-eliteOrange dark:hover:text-eliteOrange transition-colors">
             Início
           </Link>
-          <Link to="/properties" className="text-white hover:text-eliteOrange transition-colors">
+          <Link to="/properties" className="text-white dark:text-gray-200 hover:text-eliteOrange dark:hover:text-eliteOrange transition-colors">
             Comprar
           </Link>
-          <Link to="/about" className="text-white hover:text-eliteOrange transition-colors">
+          <Link to="/about" className="text-white dark:text-gray-200 hover:text-eliteOrange dark:hover:text-eliteOrange transition-colors">
             Sobre
           </Link>
-          <Link to="/contact" className="text-white hover:text-eliteOrange transition-colors">
+          <Link to="/contact" className="text-white dark:text-gray-200 hover:text-eliteOrange dark:hover:text-eliteOrange transition-colors">
             Contato
           </Link>
         </nav>
@@ -51,32 +51,32 @@ const Navbar = () => {
       </div>
 
       {/* Mobile Menu */}
-      <div className={`md:hidden bg-eliteBlue border-t border-muted ${isOpen ? 'block' : 'hidden'}`}>
+      <div className={`md:hidden bg-eliteBlue dark:bg-gray-900 border-t border-muted dark:border-gray-800 ${isOpen ? 'block' : 'hidden'}`}>
         <div className="flex flex-col px-4 py-4 space-y-4">
           <Link 
             to="/" 
-            className="text-white hover:text-eliteOrange transition-colors py-2"
+            className="text-white dark:text-gray-200 hover:text-eliteOrange dark:hover:text-eliteOrange transition-colors py-2"
             onClick={() => setIsOpen(false)}
           >
             Início
           </Link>
           <Link 
             to="/properties" 
-            className="text-white hover:text-eliteOrange transition-colors py-2"
+            className="text-white dark:text-gray-200 hover:text-eliteOrange dark:hover:text-eliteOrange transition-colors py-2"
             onClick={() => setIsOpen(false)}
           >
             Comprar
           </Link>
           <Link 
             to="/about" 
-            className="text-white hover:text-eliteOrange transition-colors py-2"
+            className="text-white dark:text-gray-200 hover:text-eliteOrange dark:hover:text-eliteOrange transition-colors py-2"
             onClick={() => setIsOpen(false)}
           >
             Sobre
           </Link>
           <Link 
             to="/contact" 
-            className="text-white hover:text-eliteOrange transition-colors py-2"
+            className="text-white dark:text-gray-200 hover:text-eliteOrange dark:hover:text-eliteOrange transition-colors py-2"
             onClick={() => setIsOpen(false)}
           >
             Contato

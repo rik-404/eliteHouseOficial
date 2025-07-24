@@ -31,6 +31,7 @@ export interface Client {
   notes: string;
   origin?: string;
   scheduling?: 'Aguardando' | 'Não realizada' | 'Realizada' | null;
+  salary_range?: number | null;
   created_at: string;
   updated_at: string;
 }

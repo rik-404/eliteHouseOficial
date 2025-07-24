@@ -37,6 +37,7 @@ const NewClient = lazy(() => import('../pages/admin/NewClient'));
 const SupabaseAccess = lazy(() => import('../pages/admin/SupabaseAccess'));
 const ClientEdit = lazy(() => import('../pages/admin/ClientEdit'));
 const NewTask = lazy(() => import('../pages/admin/NewTask'));
+const Schedule = lazy(() => import('../pages/admin/Schedule'));
 
 export const adminRoutes: RouteObject[] = [
   {
@@ -98,6 +99,10 @@ export const adminRoutes: RouteObject[] = [
   {
     path: '/admin/clients/new-task',
     element: <NewTask />
+  },
+  {
+    path: '/admin/schedule',
+    element: <Schedule />
   },
   {
     path: '/admin/clients/edit/:id',

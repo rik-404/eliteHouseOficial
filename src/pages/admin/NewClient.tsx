@@ -42,6 +42,7 @@ interface Client {
   status: ClientStatus;
   notes: string;
   scheduling?: string;
+  salary_range?: number | null;
 }
 
 export const NewClient = () => {
@@ -55,9 +56,9 @@ export const NewClient = () => {
     email: '',
     phone: '',
     cpf: '',
-    rg: '',
-    birth_date: '',
-    pis: '',
+    rg: null,
+    birth_date: null,
+    pis: null,
     cep: '',
     street: '',
     number: '',
@@ -69,7 +70,8 @@ export const NewClient = () => {
     broker_id: user?.role === 'corretor' ? user.broker_id : '',
     status: 'Novo' as ClientStatus,
     notes: '',
-    scheduling: 'Aguardando' // Valor padrão para novos clientes
+    scheduling: 'Aguardando',
+    salary_range: null,
   };
 
   const [client, setClient] = useState<Client>(initialClient);
@@ -241,7 +243,8 @@ export const NewClient = () => {
         notes: client.notes,
         origin: client.origin,
         scheduling: 'Aguardando',
-        broker_id: user?.role === 'corretor' ? user.broker_id : client.broker_id
+        broker_id: user?.role === 'corretor' ? user.broker_id : client.broker_id,
+        salary_range: client.salary_range
       };
       
       console.log('Dados do cliente a serem inseridos:', insertData);
@@ -374,6 +377,25 @@ export const NewClient = () => {
 
             />
           </div>
+          <div>
+            <Label htmlFor="salary_range">Faixa Salarial (R$)</Label>
+            <Select
+              value={client.salary_range?.toString() || ''}
+              onValueChange={(value) => setClient({ ...client, salary_range: value ? Number(value) : null })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma faixa salarial" />
+              </SelectTrigger>
+              <SelectContent>
+                {[1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500, 8000, 8500, 9000, 9500, 10000].map((value) => (
+                  <SelectItem key={value} value={value.toString()}>
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div>
             <Label htmlFor="broker_id">Corretor <span className="text-red-500">*</span></Label>
             {user?.role === 'corretor' ? (

@@ -17,6 +17,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { User } from '@/types/user';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePendingCount } from '@/hooks/usePendingCount';
+import { PendingClientsPopup } from '@/components/PendingClientsPopup';
 
 // Componente para o funil de vendas
 const SalesFunnel = ({ data, onClick }: { data: any[], onClick: (status: string, count: number) => void }) => {
@@ -137,6 +139,15 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
   const [user, setUser] = useState<User | null>(null);
+
+  // Hook para gerenciar clientes pendentes
+  const { 
+    pendingCount, 
+    loading: pendingLoading, 
+    showPopup, 
+    viewPendingClients, 
+    closePopup 
+  } = usePendingCount();
 
   // Carrega o usuário do AuthContext quando o componente é montado
   useEffect(() => {
@@ -270,7 +281,14 @@ const Dashboard = () => {
   // Função para lidar com o clique em um item do funil
   const handleFunnelClick = (status: string, count: number) => {
     console.log(`Clicou em ${status} com ${count} registros`);
-    navigate(`/admin/clients?status=${encodeURIComponent(status)}`);
+    let url = `/admin/clients?status=${encodeURIComponent(status)}`;
+    
+    // Se for um corretor, adiciona o filtro de broker_id
+    if (user?.role === 'corretor' && user?.broker_id) {
+      url += `&broker_id=${user.broker_id}`;
+    }
+    
+    navigate(url);
   };
   
   // Função para lidar com o clique em uma fatia do gráfico de análise
@@ -1249,6 +1267,15 @@ const Dashboard = () => {
           </Card>
           </div>
         </div>
+      )}
+      
+      {/* Popup de clientes pendentes */}
+      {showPopup && (
+        <PendingClientsPopup 
+          count={pendingCount}
+          onView={viewPendingClients}
+          onClose={closePopup}
+        />
       )}
 
       {/* Seção de Agendamentos */}

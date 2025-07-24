@@ -1,6 +1,26 @@
 # Enable rewrite engine
 RewriteEngine On
 
+# Configurações de cache para evitar problemas
+<IfModule mod_headers.c>
+    # Força a validação de cache em cada solicitação
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+    
+    # Desativa o cache para arquivos HTML e JSON
+    <FilesMatch "\.(html?|json)$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+    
+    # Configura cache para arquivos estáticos
+    <FilesMatch "\.(css|js|jpg|jpeg|png|gif|ico|svg|woff|woff2|ttf|eot)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+</IfModule>
+
 # Handle Front Controller Pattern
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
@@ -40,6 +60,10 @@ AddType application/javascript .js
 AddType text/css .css
 AddType image/webp .webp
 AddType image/svg+xml .svg
+
+# Remove index.html from URL
+RewriteCond %{THE_REQUEST} /index\.html [NC]
+RewriteRule ^(.*?)index\.html$ /$1 [R=301,L,NC,NE]
 
 # Force HTTPS
 RewriteCond %{HTTPS} off

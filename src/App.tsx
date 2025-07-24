@@ -2,6 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { AdminThemeProvider } from "@/components/theme/AdminThemeProvider";
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { useLocation } from 'react-router-dom';
 import { Suspense } from 'react';
@@ -20,6 +22,7 @@ import { PrivateUserRoute } from './components/admin/PrivateUserRoute';
 import { adminRoutes } from './routes/admin.routes';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LogsProvider } from './contexts/LogsContext';
+import { InactivityWrapper } from './components/auth/InactivityWrapper';
 
 const queryClient = new QueryClient();
 
@@ -30,13 +33,18 @@ const App = () => (
     <AuthProvider>
       <TempAuthProvider>
         <LogsProvider>
+          <InactivityWrapper>
           <TooltipProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />
-              <Route path="/admin" element={<PrivateUserRoute />}>
+              <Route path="/admin" element={
+                <AdminThemeProvider>
+                  <PrivateUserRoute />
+                </AdminThemeProvider>
+              }>
                 {adminRoutes.map((route, index) => (
                   <Route
                     key={index}
@@ -53,15 +61,21 @@ const App = () => (
                   />
                 ))}
               </Route>
-              <Route path="/" element={<Index />} />
-              <Route path="/property/:id" element={<PropertyDetails />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/properties" element={<Properties />} />
-              <Route path="*" element={<NotFound />} />
+              <Route path="*" element={
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/sobre" element={<About />} />
+                  <Route path="/contato" element={<Contact />} />
+                  <Route path="/imoveis" element={<Properties />} />
+                  <Route path="/imoveis/:id" element={<PropertyDetails />} />
+                  <Route path="/404" element={<NotFound />} />
+                  <Route path="*" element={<Navigate to="/404" replace />} />
+                </Routes>
+              } />
             </Routes>
           </BrowserRouter>
           </TooltipProvider>
+          </InactivityWrapper>
         </LogsProvider>
       </TempAuthProvider>
     </AuthProvider>

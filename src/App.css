@@ -1,8 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 255, 255, 255;
+  --background-end-rgb: 240, 240, 240;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 20, 20, 30;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
+  min-height: 100vh;
 }
 
 .logo {
@@ -39,4 +68,42 @@
 
 .read-the-docs {
   color: #888;
+}
+
+/* Estilos para tema escuro */
+.dark .read-the-docs {
+  color: #aaa;
+}
+
+/* Estilos para inputs e botões no tema escuro */
+.dark input,
+.dark button,
+.dark select,
+.dark textarea {
+  background-color: #1e1e2d;
+  color: #ffffff;
+  border-color: #3a3a4a;
+}
+
+.dark input:focus,
+.dark button:focus,
+.dark select:focus,
+.dark textarea:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.3);
+}
+
+/* Estilos para cards e containers no tema escuro */
+.dark .card {
+  background-color: #1e1e2d;
+  border-color: #3a3a4a;
+}
+
+/* Estilos para links no tema escuro */
+.dark a {
+  color: #818cf8;
+}
+
+.dark a:hover {
+  color: #6366f1;
 }

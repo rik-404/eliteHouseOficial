@@ -272,6 +272,7 @@ const EditClient = () => {
           notes: formattedClient.notes,
           origin: formattedClient.origin || null,
           scheduling: formattedClient.scheduling || null,
+          salary_range: formattedClient.salary_range,
           updated_at: new Date().toISOString()
         })
         .eq('id', formattedClient.id)
@@ -571,6 +572,25 @@ const EditClient = () => {
                 </div>
               </div>
               <div className="space-y-4">
+                <div>
+                  <Label htmlFor="salary_range">Faixa Salarial (R$)</Label>
+                  <Select
+                    value={client?.salary_range?.toString() || ''}
+                    onValueChange={(value) => setClient(prev => prev ? { ...prev, salary_range: value ? Number(value) : null } : null)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma faixa salarial" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500, 8000, 8500, 9000, 9500, 10000].map((value) => (
+                        <SelectItem key={value} value={value.toString()}>
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div>
                   <Label htmlFor="notes">Observações</Label>
                   <Textarea
