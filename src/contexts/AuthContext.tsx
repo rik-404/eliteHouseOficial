@@ -128,7 +128,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Limpa o usuário do estado, sessionStorage e localStorage
       setUser(null);
       sessionStorage.removeItem('currentUser');
+      sessionStorage.clear();
+      
+      // Remove apenas os itens específicos do tema, mantendo outros dados importantes
       localStorage.removeItem('currentUser');
+      localStorage.removeItem('admin-theme');
       
       // Redireciona para a página de login
       window.location.href = '/login';

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTheme } from 'next-themes';
+import { cn } from '@/lib/utils';
 
 interface FunnelData {
   status: string;
@@ -25,13 +26,17 @@ const SalesFunnel = () => {
 
   const totalMovements = funnelData.reduce((sum, item) => sum + item.count, 0);
 
-  if (theme !== 'dark') {
-    return null; // Não renderiza nada se não estiver no modo escuro
-  }
+
 
   return (
-    <div className="dark:bg-gray-100 p-4 rounded-lg shadow-md">
-      <h3 className="text-base font-semibold mb-4 flex items-center text-gray-800">
+    <div className={cn(
+      "p-4 rounded-lg shadow-md transition-colors duration-200",
+      theme === 'dark' ? "bg-gray-100" : "bg-white border border-gray-200"
+    )}>
+      <h3 className={cn(
+        "text-base font-semibold mb-4 flex items-center",
+        theme === 'dark' ? "text-gray-800" : "text-gray-700"
+      )}>
         <svg 
           xmlns="http://www.w3.org/2000/svg" 
           className="h-4 w-4 mr-1.5 text-gray-700" 
@@ -47,7 +52,7 @@ const SalesFunnel = () => {
         {funnelData.map((item, index) => (
           <div 
             key={index}
-            className={`${item.color} ${item.width} rounded-full py-0.5 px-2 text-center cursor-pointer hover:opacity-90 transition-opacity shadow-sm mb-0.5`}
+            className={`${item.color} ${item.width} rounded-full py-0.5 px-2 text-center cursor-pointer hover:opacity-90 transition-all duration-200 shadow-sm mb-0.5`}
           >
             <div className="font-medium text-white text-xs">{item.status}</div>
             <div className="text-base font-bold text-white">{item.count}</div>
@@ -55,7 +60,10 @@ const SalesFunnel = () => {
         ))}
         
         <div className="mt-1 text-center font-medium w-full">
-          <div className="text-base font-bold text-gray-800">
+          <div className={cn(
+            "text-base font-bold",
+            theme === 'dark' ? "text-gray-800" : "text-gray-700"
+          )}>
             {totalMovements} movimentos de venda
           </div>
         </div>

@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import Footer from '@/components/layout/Footer';
-import { LayoutDashboard, MessageSquare, User, MoreVertical, LogOut, Users, Clock, Calendar, Sun, Moon } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, User, MoreVertical, LogOut, Users, Clock, Calendar } from 'lucide-react';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { useNavigate, Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -106,22 +107,7 @@ const AdminLayout = () => {
           <div className="flex items-center justify-between px-4 py-4 sm:px-6">
             <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Painel Administrativo</h1>
             <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="px-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
-                title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
-              >
-                {theme === 'dark' ? (
-                  <Sun className="h-5 w-5" />
-                ) : (
-                  <Moon className="h-5 w-5" />
-                )}
-                <span className="sr-only">
-                  {theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
-                </span>
-              </Button>
+              <ThemeToggle />
               <div className="flex items-center space-x-2">
                 <User className="h-4 w-4 text-gray-500" />
                 <div className="text-sm">

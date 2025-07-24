@@ -17,83 +17,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { User } from '@/types/user';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from 'next-themes';
+import { cn } from '@/lib/utils';
 import { usePendingCount } from '@/hooks/usePendingCount';
 import { PendingClientsPopup } from '@/components/PendingClientsPopup';
 
-// Componente para o funil de vendas
-const SalesFunnel = ({ data, onClick }: { data: any[], onClick: (status: string, count: number) => void }) => {
-  // Status do Kanban e suas cores
-  const statusColors = {
-    'Novo': '#0096FF',
-    'Atendimento': '#20B2AA',
-    'Análise documental': '#8A2BE2',
-    'Análise bancária': '#9370DB',
-    'Aprovado': '#22C55E',
-    'Condicionado': '#FF8C00',
-    'Reprovado': '#E34234',
-    'Venda realizada': '#1E90FF',
-    'Distrato': '#555555'
-  };
-
-  // Total de movimentos
-  const total = data.reduce((sum, item) => sum + item.count, 0);
-
-  // Ordenar os status na ordem do funil
-  const funnelOrder = [
-    'Novo',
-    'Atendimento',
-    'Análise documental',
-    'Análise bancária',
-    'Condicionado',
-    'Aprovado',
-    'Reprovado',
-    'Venda realizada',
-    'Distrato'
-  ];
-
-  // Ordenar os dados de acordo com a ordem do funil
-  const sortedData = [...data].sort((a, b) => {
-    return funnelOrder.indexOf(a.status) - funnelOrder.indexOf(b.status);
-  });
-
-  return (
-    <div className="bg-white p-3 rounded-lg shadow-sm">
-      <h3 className="text-base font-semibold mb-2 flex items-center">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
-          <path d="M3 3a1 1 0 000 2h11a1 1 0 100-2H3zM3 7a1 1 0 000 2h5a1 1 0 000-2H3zM3 11a1 1 0 100 2h4a1 1 0 100-2H3zM13 16a1 1 0 102 0v-5.586l1.293 1.293a1 1 0 001.414-1.414l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 101.414 1.414L13 10.414V16z" />
-        </svg>
-        Funil de vendas
-      </h3>
-      <div className="flex flex-col items-center space-y-0.5 max-w-sm mx-auto">
-        {sortedData.map((item, index) => {
-          // Calcular a largura do item com base na posição no funil
-          // Primeiro item tem 95% de largura, último tem 60%
-          const widthPercentage = 95 - (index * 3.5);
-          const width = Math.max(60, widthPercentage);
-          
-          return (
-            <div 
-              key={item.status} 
-              className="rounded-full py-0.5 px-2 text-center cursor-pointer hover:opacity-90 transition-opacity shadow-sm mb-0.5"
-              style={{ 
-                backgroundColor: statusColors[item.status as keyof typeof statusColors] || '#9e9e9e',
-                width: `${width}%`,
-                transform: 'translateX(0%)',
-              }}
-              onClick={() => onClick(item.status, item.count)}
-            >
-              <div className="font-medium text-white text-xs">{item.status}</div>
-              <div className="text-base font-bold text-white">{item.count}</div>
-            </div>
-          );
-        })}
-        <div className="mt-1 text-center font-medium w-full">
-          <div className="text-base font-bold">{total} movimentos de venda</div>
-        </div>
-      </div>
-    </div>
-  );
-};
+// Importar o componente SalesFunnel personalizado
+import SalesFunnel from '@/components/admin/SalesFunnel';
 
 // Cores para os gráficos
 const COLORS = {
@@ -136,6 +66,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 };
 
 const Dashboard = () => {
+  const { theme } = useTheme();
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
   const [user, setUser] = useState<User | null>(null);
@@ -269,32 +200,18 @@ const Dashboard = () => {
   // Estado para armazenar os dados de vendas
   const [salesData, setSalesData] = useState<{name: string, value: number}[]>([]);
   
-  // Estado para armazenar os dados do funil de vendas
-  const [funnelData, setFunnelData] = useState<{status: string, count: number}[]>([]);
-  const [loadingFunnel, setLoadingFunnel] = useState(true);
-  const [isFunnelMinimized, setIsFunnelMinimized] = useState(true);
-  
   // Estado para armazenar os dados de clientes em análise
   const [analysisData, setAnalysisData] = useState<{name: string, value: number}[]>([]);
   const [loadingAnalysis, setLoadingAnalysis] = useState(true);
-
-  // Função para lidar com o clique em um item do funil
-  const handleFunnelClick = (status: string, count: number) => {
-    console.log(`Clicou em ${status} com ${count} registros`);
-    let url = `/admin/clients?status=${encodeURIComponent(status)}`;
-    
-    // Se for um corretor, adiciona o filtro de broker_id
-    if (user?.role === 'corretor' && user?.broker_id) {
-      url += `&broker_id=${user.broker_id}`;
-    }
-    
-    navigate(url);
-  };
   
+  // Estados para o funil de vendas
+  const [funnelData, setFunnelData] = useState<{status: string, count: number}[]>([]);
+  const [loadingFunnel, setLoadingFunnel] = useState(true);
+  const [isFunnelMinimized, setIsFunnelMinimized] = useState(true); // Inicia minimizado por padrão
+
   // Função para lidar com o clique em uma fatia do gráfico de análise
   const handleAnalysisClick = (data: any) => {
     if (data && data.name) {
-      console.log(`Clicou em ${data.name} com ${data.value} registros`);
       navigate(`/admin/clients?status=${encodeURIComponent(data.name)}`);
     }
   };
@@ -741,7 +658,6 @@ const Dashboard = () => {
           fetchSchedulingData(),
           fetchSalesData(),
           fetchUpcomingAppointments(),
-          fetchFunnelData(),
           fetchAnalysisData()
         ]);
       } catch (error) {
@@ -957,30 +873,23 @@ const Dashboard = () => {
             onClick={() => setIsFunnelMinimized(!isFunnelMinimized)}
             className="flex items-center gap-2"
           >
-            {isFunnelMinimized ? (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
-              </svg>
-            )}
             {isFunnelMinimized ? 'Expandir' : 'Minimizar'}
           </Button>
         </div>
-        {loadingFunnel ? (
-          <div className="flex items-center justify-center h-40 bg-white rounded-lg shadow-sm p-4">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
-        ) : isFunnelMinimized ? (
-          <div className="flex items-center justify-center h-16 bg-white rounded-lg shadow-sm">
-            <div className="text-sm text-muted-foreground">
-              {funnelData.reduce((sum, item) => sum + item.count, 0)} movimentos de venda
-            </div>
+        {isFunnelMinimized ? (
+          <div className={cn(
+            "p-4 rounded-lg shadow-sm transition-colors duration-200 text-center",
+            theme === 'dark' ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"
+          )}>
+            <span className="text-sm text-muted-foreground">Funil de vendas minimizado</span>
           </div>
         ) : (
-          <SalesFunnel data={funnelData} onClick={handleFunnelClick} />
+          <div className={cn(
+            "p-4 rounded-lg shadow-sm transition-colors duration-200",
+            theme === 'dark' ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"
+          )}>
+            <SalesFunnel />
+          </div>
         )}
       </div>
 
