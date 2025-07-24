@@ -103,7 +103,7 @@ const Login = () => {
             </button>
           </div>
           <div className="mt-8 text-center text-sm text-gray-400">
-            Versão 1.6.8
+            Versão 1.6.9
           </div>
         </CustomForm>
       </div>
