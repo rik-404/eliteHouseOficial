@@ -29,13 +29,13 @@ const Navbar = () => {
           <Link to="/" className="text-white dark:text-gray-200 hover:text-eliteOrange dark:hover:text-eliteOrange transition-colors">
             Início
           </Link>
-          <Link to="/properties" className="text-white dark:text-gray-200 hover:text-eliteOrange dark:hover:text-eliteOrange transition-colors">
+          <Link to="/imoveis" className="text-white dark:text-gray-200 hover:text-eliteOrange dark:hover:text-eliteOrange transition-colors">
             Comprar
           </Link>
-          <Link to="/about" className="text-white dark:text-gray-200 hover:text-eliteOrange dark:hover:text-eliteOrange transition-colors">
+          <Link to="/sobre" className="text-white dark:text-gray-200 hover:text-eliteOrange dark:hover:text-eliteOrange transition-colors">
             Sobre
           </Link>
-          <Link to="/contact" className="text-white dark:text-gray-200 hover:text-eliteOrange dark:hover:text-eliteOrange transition-colors">
+          <Link to="/contato" className="text-white dark:text-gray-200 hover:text-eliteOrange dark:hover:text-eliteOrange transition-colors">
             Contato
           </Link>
         </nav>
@@ -61,21 +61,21 @@ const Navbar = () => {
             Início
           </Link>
           <Link 
-            to="/properties" 
+            to="/imoveis" 
             className="text-white dark:text-gray-200 hover:text-eliteOrange dark:hover:text-eliteOrange transition-colors py-2"
             onClick={() => setIsOpen(false)}
           >
             Comprar
           </Link>
           <Link 
-            to="/about" 
+            to="/sobre"
             className="text-white dark:text-gray-200 hover:text-eliteOrange dark:hover:text-eliteOrange transition-colors py-2"
             onClick={() => setIsOpen(false)}
           >
             Sobre
           </Link>
           <Link 
-            to="/contact" 
+            to="/contato" 
             className="text-white dark:text-gray-200 hover:text-eliteOrange dark:hover:text-eliteOrange transition-colors py-2"
             onClick={() => setIsOpen(false)}
           >

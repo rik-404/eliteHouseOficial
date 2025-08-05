@@ -26,12 +26,12 @@ const Hero = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <Button size="lg" className="bg-eliteOrange hover:bg-eliteOrange-light text-white">
-              <Link to="/properties" className="flex items-center">
+              <Link to="/imoveis" className="flex items-center">
                 Ver Imóveis
               </Link>
             </Button>
             <Button size="lg" variant="outline" className="border-eliteBlue text-eliteBlue hover:bg-eliteBlue/10">
-              <Link to="/contact" className="flex items-center">
+              <Link to="/contato" className="flex items-center">
                 Fale Conosco
               </Link>
             </Button>

@@ -12,6 +12,11 @@ import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import CustomForm from '@/components/ui/CustomForm';
 
+interface PropertyMedia {
+  url: string;
+  type: 'image' | 'video' | 'youtube';
+}
+
 interface PropertyFormProps {
   property?: {
     id?: number;
@@ -26,7 +31,7 @@ interface PropertyFormProps {
     price: number;
     status: string;
     image_url?: string;
-    images?: string[];
+    additional_media?: PropertyMedia[];
   };
 }
 
@@ -72,23 +77,26 @@ const PropertyForm = ({ property }: PropertyFormProps) => {
     image_url: property?.image_url || ''
   });
   
-  const [images, setImages] = useState<{url: string; file?: File}[]>(
-    property?.images?.map(url => ({ url })) || []
+  const [images, setImages] = useState<Array<{url: string; file?: File; type?: 'image' | 'video' | 'youtube'}>>(
+    property?.additional_media?.map(media => ({ 
+      url: media.url,
+      type: media.type 
+    })) || []
   );
   const [uploading, setUploading] = useState(false);
+  const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
 
   const handleImageUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     
     setUploading(true);
-    const newImages = [...images];
     
     try {
       // Limitar o número total de imagens a 15
       const remainingSlots = 15 - images.length;
-      const filesToUpload = Array.from(files).slice(0, remainingSlots);
+      const newFiles = Array.from(files).slice(0, remainingSlots);
       
-      if (filesToUpload.length < files.length) {
+      if (newFiles.length < files.length) {
         toast({
           title: "Limite de imagens atingido",
           description: `Apenas ${remainingSlots} imagens foram adicionadas. Máximo de 15 imagens por imóvel.`,
@@ -96,20 +104,27 @@ const PropertyForm = ({ property }: PropertyFormProps) => {
         });
       }
       
-      for (const file of filesToUpload) {
-        // Verificar se é uma imagem
-        if (!file.type.startsWith('image/')) {
-          toast({
-            title: "Tipo de arquivo inválido",
-            description: "Por favor, selecione apenas arquivos de imagem.",
-            variant: "destructive"
-          });
-          continue;
-        }
-        
-        // Adicionar a imagem à lista com uma URL temporária
-        const tempUrl = URL.createObjectURL(file);
-        newImages.push({ url: tempUrl, file });
+      // Verificar tipos de arquivo
+      const validFiles = newFiles.filter(file => file.type.startsWith('image/'));
+      
+      if (validFiles.length < newFiles.length) {
+        toast({
+          title: "Tipo de arquivo inválido",
+          description: "Alguns arquivos não são imagens e foram ignorados.",
+          variant: "destructive"
+        });
+      }
+      
+      // Adicionar os novos arquivos à lista de uploads
+      setFilesToUpload(prev => [...prev, ...validFiles]);
+      
+      // Adicionar placeholders para visualização
+      const newImages = [...images];
+      for (const file of validFiles) {
+        newImages.push({ 
+          url: URL.createObjectURL(file), 
+          file 
+        });
       }
       
       setImages(newImages);
@@ -131,10 +146,13 @@ const PropertyForm = ({ property }: PropertyFormProps) => {
   
   const removeImage = (index: number) => {
     const newImages = [...images];
+    const removedImage = newImages[index];
     
     // Se a imagem tiver uma URL temporária, revogá-la para liberar memória
-    if (newImages[index].file) {
-      URL.revokeObjectURL(newImages[index].url);
+    if (removedImage.file) {
+      URL.revokeObjectURL(removedImage.url);
+      // Remover o arquivo da lista de uploads
+      setFilesToUpload(prev => prev.filter(file => file !== removedImage.file));
     }
     
     newImages.splice(index, 1);
@@ -150,21 +168,22 @@ const PropertyForm = ({ property }: PropertyFormProps) => {
       const uploadedImages = [];
       let mainImageUrl = formData.image_url;
       
-      for (let i = 0; i < images.length; i++) {
-        const image = images[i];
-        
-        // Se a imagem já tiver uma URL e não tiver um arquivo, significa que já foi carregada
-        if (!image.file) {
+      // Processar primeiro as imagens existentes (já estão no servidor)
+      for (const image of images) {
+        if (!image.file && image.url) {
           uploadedImages.push(image.url);
-          continue;
         }
-        
-        // Fazer upload da imagem
+      }
+      
+      // Fazer upload das novas imagens
+      for (let i = 0; i < filesToUpload.length; i++) {
+        const file = filesToUpload[i];
         const timestamp = Date.now();
         const randomId = Math.random().toString(36).substring(2, 7);
-        const filePath = `properties/${timestamp}-${randomId}`;
+        const fileExt = file.name.split('.').pop();
+        const filePath = `properties/${timestamp}-${randomId}.${fileExt}`;
         
-        const { data, error } = await uploadFileWithRetry(filePath, image.file);
+        const { data, error } = await uploadFileWithRetry(filePath, file);
         
         if (error) {
           console.error('Erro ao fazer upload da imagem:', error);
@@ -185,17 +204,37 @@ const PropertyForm = ({ property }: PropertyFormProps) => {
         }
       }
       
-      // Implementar a lógica de envio do formulário aqui
-      // Por exemplo, enviar para o Supabase com todas as URLs das imagens
-      console.log('Dados do formulário:', {
+      // Preparar os dados para salvar no banco de dados
+      const propertyData = {
         ...formData,
         image_url: mainImageUrl,
-        images: uploadedImages
-      });
+        additional_media: uploadedImages.map(url => ({
+          url,
+          type: 'image' // Assumindo que todas as imagens são do tipo 'image'
+        }))
+      };
+
+      // Verificar se é uma atualização ou criação de novo imóvel
+      if (property?.id) {
+        // Atualizar imóvel existente
+        const { error } = await supabase
+          .from('properties')
+          .update(propertyData)
+          .eq('id', property.id);
+
+        if (error) throw error;
+      } else {
+        // Criar novo imóvel
+        const { error } = await supabase
+          .from('properties')
+          .insert([propertyData]);
+
+        if (error) throw error;
+      }
       
       toast({
         title: "Sucesso",
-        description: "Imóvel salvo com sucesso!",
+        description: `Imóvel ${property?.id ? 'atualizado' : 'cadastrado'} com sucesso!`,
       });
       
       // Navegar de volta para a lista de propriedades

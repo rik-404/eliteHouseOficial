@@ -1,7 +1,8 @@
 {
   "name": "Elite House",
   "short_name": "Elite House",
-  "description": "Plataforma de imóveis Elite House",
+  "version": "1.7.0.3",
+  "description": "Plataforma de imóveis Elite House v1.7.0.3",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

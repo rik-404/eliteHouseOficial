@@ -8,6 +8,10 @@ import { version as pkgVersion } from './package.json';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  define: {
+    // Define a versão globalmente para ser acessível em todo o app
+    __APP_VERSION__: JSON.stringify(pkgVersion)
+  },
   base: '/',
   server: {
     host: '0.0.0.0',
@@ -47,9 +51,6 @@ export default defineConfig(({ mode }) => ({
     manifest: true,
     // Garante que o HTML seja atualizado com os novos hashes
     emptyOutDir: true
-  },
-  define: {
-    __APP_VERSION__: JSON.stringify(pkgVersion),
   },
   plugins: [
     react(),

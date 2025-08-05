@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { AdminThemeProvider } from "@/components/theme/AdminThemeProvider";
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { useLocation } from 'react-router-dom';
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import Index from "./pages/Index";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
@@ -23,21 +23,33 @@ import { adminRoutes } from './routes/admin.routes';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LogsProvider } from './contexts/LogsContext';
 import { InactivityWrapper } from './components/auth/InactivityWrapper';
+import { UpdateNotification } from './components/ui/UpdateNotification';
 
 const queryClient = new QueryClient();
 
 
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TempAuthProvider>
-        <LogsProvider>
-          <InactivityWrapper>
-          <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+const App = () => {
+  // Força a verificação de atualizações quando o aplicativo é carregado
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(registration => {
+        registration.update().catch(console.error);
+      });
+    }
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TempAuthProvider>
+          <LogsProvider>
+            <InactivityWrapper>
+            <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <UpdateNotification />
+            <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/admin" element={
@@ -73,13 +85,14 @@ const App = () => (
                 </Routes>
               } />
             </Routes>
-          </BrowserRouter>
-          </TooltipProvider>
-          </InactivityWrapper>
-        </LogsProvider>
-      </TempAuthProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+            </BrowserRouter>
+            </TooltipProvider>
+            </InactivityWrapper>
+          </LogsProvider>
+        </TempAuthProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

@@ -40,12 +40,16 @@ interface PropertyCardProps {
 }
 
 const PropertyCard = ({ property, featured = false }: PropertyCardProps) => {
+  console.log('Renderizando PropertyCard:', { id: property.id, title: property.title, featured });
+  
   const cardBorder = featured ? 'border-2 border-eliteOrange' : 'border-2 border-orange-500';
   const formattedPrice = new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
     maximumFractionDigits: 0,
   }).format(property.price);
+  
+  console.log('Preço formatado:', formattedPrice);
 
   return (
     <div className={`property-card group ${featured ? 'h-full' : ''} ${cardBorder}`}>
@@ -111,7 +115,7 @@ const PropertyCard = ({ property, featured = false }: PropertyCardProps) => {
           ) : null}
         </div>
         
-        <Link to={`/property/${property.id}`}>
+        <Link to={`/imoveis/${property.id}`}>
           <Button 
             variant="outline" 
             className="w-full border-eliteOrange text-eliteOrange hover:bg-eliteOrange hover:text-white group"

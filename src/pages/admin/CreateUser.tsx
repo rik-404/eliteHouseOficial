@@ -144,19 +144,19 @@ const CreateUser = () => {
           type="button"
           variant="outline"
           onClick={() => navigate('/admin/users')}
-          className="bg-orange-500 hover:bg-orange-600 text-gray-900"
+          className="bg-orange-600 hover:bg-orange-700 text-white dark:bg-orange-700 dark:hover:bg-orange-800"
         >
           Voltar para Usuários
         </Button>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded relative mb-4">
           <span className="block sm:inline">{error}</span>
         </div>
       )}
 
-      <div className="bg-white p-6 rounded-lg shadow-md">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
         <CustomForm onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
@@ -166,6 +166,7 @@ const CreateUser = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Nome completo"
+                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -175,6 +176,7 @@ const CreateUser = () => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="Nome de usuário"
+                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -185,6 +187,7 @@ const CreateUser = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email"
+                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -201,6 +204,7 @@ const CreateUser = () => {
                 }}
                 placeholder="Apenas números"
                 required
+                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -216,6 +220,7 @@ const CreateUser = () => {
                   }
                 }}
                 placeholder="(XX) XXXXX-XXXX"
+                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -226,7 +231,7 @@ const CreateUser = () => {
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="Ex: Rua das Flores, 123 - Centro, São Paulo - SP, 01000-000"
-                className="h-16"
+                className="h-16 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -238,6 +243,7 @@ const CreateUser = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Digite uma senha forte"
                 required
+                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -249,6 +255,7 @@ const CreateUser = () => {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirme a senha"
                 required
+                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -258,6 +265,7 @@ const CreateUser = () => {
                 type="date"
                 value={birth}
                 onChange={(e) => setBirth(e.target.value)}
+                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -267,6 +275,7 @@ const CreateUser = () => {
                 value={emergencyContact}
                 onChange={(e) => setEmergencyContact(e.target.value)}
                 placeholder="Nome do contato de emergência"
+                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -277,17 +286,22 @@ const CreateUser = () => {
                 value={emergencyPhone}
                 onChange={(e) => setEmergencyPhone(e.target.value)}
                 placeholder="Telefone de emergência"
+                className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
               />
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="role">Cargo</Label>
               <Select value={role} onValueChange={setRole}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
                   <SelectValue placeholder="Selecione o cargo" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
                   {roleOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
+                    <SelectItem 
+                      key={option.value} 
+                      value={option.value}
+                      className="hover:bg-gray-100 dark:hover:bg-gray-600 focus:bg-gray-100 dark:focus:bg-gray-600"
+                    >
                       {option.label}
                     </SelectItem>
                   ))}
@@ -301,8 +315,9 @@ const CreateUser = () => {
                   id="active"
                   checked={active}
                   onCheckedChange={setActive}
+                  className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-200 dark:data-[state=unchecked]:bg-gray-600"
                 />
-                <span>Ativo</span>
+                <span className="text-gray-900 dark:text-white">Ativo</span>
               </div>
             </div>
           </div>
@@ -310,7 +325,7 @@ const CreateUser = () => {
             <Button 
               type="submit" 
               disabled={loading}
-              className="bg-green-500 hover:bg-green-600 text-white"
+              className="bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-800"
             >
               {loading ? 'Criando...' : 'Criar Usuário'}
             </Button>

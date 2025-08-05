@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { APP_NAME, APP_VERSION } from '@/constants/app';
 
 const Footer = () => {
   const [showTerms, setShowTerms] = useState(false);
@@ -14,7 +15,7 @@ const Footer = () => {
               ImobiFlow — Powered by Vendramini Informática | © {new Date().getFullYear()}
             </div>
             <div className="flex items-center space-x-6">
-              <span className="text-sm text-gray-500">Versão {__APP_VERSION__}</span>
+              <span className="text-sm text-gray-500">{APP_NAME} v{APP_VERSION}</span>
               <button 
                 className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
                 onClick={() => setShowTerms(true)}

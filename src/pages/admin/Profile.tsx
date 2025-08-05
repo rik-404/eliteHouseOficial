@@ -139,26 +139,26 @@ const Profile = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold">Editar Perfil</h1>
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Editar Perfil</h1>
         <Button
           onClick={() => navigate('/admin')}
-          className="bg-orange-500 hover:bg-orange-600 text-white"
+          className="bg-orange-600 hover:bg-orange-700 text-white dark:bg-orange-700 dark:hover:bg-orange-800"
         >
           Voltar
         </Button>
       </div>
-      <CustomForm onSubmit={handleSubmit} className="space-y-6 bg-white p-6 rounded-lg shadow-md">
+      <CustomForm onSubmit={handleSubmit} className="space-y-6 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
         {passwordError && (
-          <div className="p-4 text-red-500 bg-red-50 rounded-md mb-6">
+          <div className="p-4 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md mb-6">
             {passwordError}
           </div>
         )}
         {successMessage && (
-          <div className="p-4 text-green-500 bg-green-50 rounded-md mb-6">
+          <div className="p-4 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-md mb-6">
             {successMessage}
           </div>
         )}
-        <div className="grid grid-cols-2 gap-4" id="personal-info">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4" id="personal-info">
           <div>
             <Label htmlFor="name">Nome</Label>
             <Input
@@ -271,8 +271,8 @@ const Profile = () => {
           </div>
         </div>
 
-        <div className="space-y-4" id="password-section">
-          <h2 className="text-lg font-semibold mb-4">Alterar Senha</h2>
+        <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700" id="password-section">
+          <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Alterar Senha</h2>
           <div>
             <Label htmlFor="currentPassword">Senha Atual</Label>
             <Input
@@ -315,12 +315,17 @@ const Profile = () => {
         </div>
 
         <div className="flex justify-end space-x-4">
-          <Button type="button" onClick={() => navigate('/admin')} variant="outline">
+          <Button 
+            type="button" 
+            onClick={() => navigate('/admin')} 
+            variant="outline"
+            className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
             Cancelar
           </Button>
           <Button 
             type="submit" 
-            className="bg-green-500 hover:bg-green-600 text-white"
+            className="bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-800"
             disabled={submitLoading}
           >
             {submitLoading ? 'Salvando...' : 'Salvar'}

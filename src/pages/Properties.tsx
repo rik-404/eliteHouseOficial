@@ -30,6 +30,14 @@ const Properties: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState(searchParams.get('type') || 'all');
   const [minPriceFilter, setMinPriceFilter] = useState(parseInt(searchParams.get('minPrice') || '100000'));
   const [maxPriceFilter, setMaxPriceFilter] = useState(parseInt(searchParams.get('maxPrice') || '10000000'));
+  
+  // Log dos valores iniciais dos filtros
+  console.log('Valores iniciais dos filtros:', {
+    locationFilter,
+    typeFilter,
+    minPriceFilter,
+    maxPriceFilter
+  });
 
   
   // State for mobile filter visibility
@@ -75,25 +83,31 @@ const Properties: React.FC = () => {
     loadLocations();
   }, []);
 
-  // Apply filters
+  // Apenas mostra imóveis ativos (status = true)
   const applyFilters = () => {
-    const filtered = properties.filter(property => {
-      const matchesLocation = locationFilter === 'Todos' || property.location === locationFilter;
-      const matchesType = typeFilter === 'all' || property.type === typeFilter;
-      const matchesPrice = property.price >= minPriceFilter && property.price <= maxPriceFilter;
-      return matchesLocation && matchesType && matchesPrice;
+    console.log('Filtrando apenas imóveis ativos');
+    
+    // Filtra apenas por status ativo
+    const activeProperties = properties.filter(property => {
+      const isActive = property.status === true;
+      console.log(`Imóvel ${property.id} - ${property.title}: ativo=${isActive}`);
+      return isActive;
     });
-
-    setFilteredProperties(filtered);
-    setTotalProperties(filtered.length);
-    setTotalPages(Math.ceil(filtered.length / itemsPerPage));
-
-    // Atualizar os dados da página atual
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = Math.min(startIndex + itemsPerPage, filtered.length);
-    setCurrentPageProperties(filtered.slice(startIndex, endIndex));
-
-    // Resetar para a primeira página quando os filtros mudam
+    
+    console.log('Imóveis ativos encontrados:', activeProperties);
+    
+    setFilteredProperties(activeProperties);
+    setTotalProperties(activeProperties.length);
+    setTotalPages(Math.ceil(activeProperties.length / itemsPerPage));
+    
+    // Atualiza a página atual com os imóveis ativos
+    const startIndex = 0;
+    const endIndex = Math.min(itemsPerPage, activeProperties.length);
+    const currentPageItems = activeProperties.slice(startIndex, endIndex);
+    
+    console.log('Itens ativos na página atual:', currentPageItems);
+    
+    setCurrentPageProperties(currentPageItems);
     setCurrentPage(1);
   };
 
@@ -108,33 +122,43 @@ const Properties: React.FC = () => {
         setIsLoading(true);
         console.log('Iniciando carregamento de propriedades...');
         
+        // Busca apenas imóveis ativos (status = true)
         const { data: propertiesData, error: propertiesError } = await supabase
           .from('properties')
           .select('*')
-          .eq('status', true) // Apenas imóveis ativos
+          .eq('status', true)  // Apenas ativos
           .order('created_at', { ascending: false });
+
+        console.log('Resultado da consulta de imóveis ativos:', { 
+          total: propertiesData?.length || 0,
+          error: propertiesError 
+        });
 
         if (propertiesError) throw propertiesError;
 
         const properties = propertiesData || [];
+        console.log('Imóveis ativos carregados:', properties);
+        
         setProperties(properties);
         setFilteredProperties(properties);
         
         // Atualizar os dados da página atual
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        const endIndex = Math.min(startIndex + itemsPerPage, properties.length);
-        setCurrentPageProperties(properties.slice(startIndex, endIndex));
+        const startIndex = 0; // Sempre começar na primeira página
+        const endIndex = Math.min(itemsPerPage, properties.length);
+        const currentPageProps = properties.slice(startIndex, endIndex);
+        console.log('Imóveis ativos na página atual:', currentPageProps);
+        
+        setCurrentPageProperties(currentPageProps);
         
         // Atualizar o total de páginas
         setTotalProperties(properties.length);
         setTotalPages(Math.ceil(properties.length / itemsPerPage));
 
-
       } catch (error) {
         console.error('Erro ao carregar propriedades:', error);
         toast({
           title: "Erro",
-          description: "Falha ao carregar as propriedades. Por favor, tente novamente.",
+          description: `Falha ao carregar as propriedades. ${error.message}`,
         });
       } finally {
         setIsLoading(false);

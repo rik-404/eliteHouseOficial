@@ -69,6 +69,8 @@ const Clients = () => {
   const [clientToAssign, setClientToAssign] = useState<Client | null>(null);
   const [isKanbanView, setIsKanbanView] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -610,6 +612,8 @@ const Clients = () => {
       console.log('Filtro de agendamento ativo na URL:', schedulingParam);
     }
     
+    // Resetar para a primeira página quando os filtros mudarem
+    setCurrentPage(1);
     fetchClients();
   }, [selectedBroker, selectedStatus, searchParams]);
 
@@ -672,8 +676,81 @@ const Clients = () => {
     return broker ? broker.name : 'Corretor não encontrado';
   };
 
+  // Cálculo da paginação
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredClients.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
+
+  // Componente de paginação reutilizável
+  const PaginationControls = ({ position = 'bottom' }) => (
+    <div className={`flex items-center justify-between ${position === 'top' ? 'mb-4' : 'mt-4'}`}>
+      <div className="text-sm text-gray-500">
+        Mostrando {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredClients.length)} de {filteredClients.length} clientes
+      </div>
+      <div className="flex space-x-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
+        >
+          Anterior
+        </Button>
+        <div className="flex items-center space-x-1">
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            // Mostra no máximo 5 páginas de cada vez
+            let pageNum;
+            if (totalPages <= 5) {
+              pageNum = i + 1;
+            } else if (currentPage <= 3) {
+              pageNum = i + 1;
+            } else if (currentPage >= totalPages - 2) {
+              pageNum = totalPages - 4 + i;
+            } else {
+              pageNum = currentPage - 2 + i;
+            }
+            
+            return (
+              <Button
+                key={pageNum}
+                variant={currentPage === pageNum ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCurrentPage(pageNum)}
+                className={currentPage === pageNum ? "bg-blue-500 text-white" : ""}
+              >
+                {pageNum}
+              </Button>
+            );
+          })}
+          {totalPages > 5 && currentPage < totalPages - 2 && (
+            <span className="px-2">...</span>
+          )}
+          {totalPages > 5 && currentPage < totalPages - 2 && (
+            <Button
+              variant={currentPage === totalPages ? "default" : "outline"}
+              size="sm"
+              onClick={() => setCurrentPage(totalPages)}
+              className={currentPage === totalPages ? "bg-blue-500 text-white" : ""}
+            >
+              {totalPages}
+            </Button>
+          )}
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+          disabled={currentPage === totalPages}
+        >
+          Próxima
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto p-4 dark:bg-gray-900 dark:text-gray-100 min-h-screen">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold">Clientes</h1>
@@ -720,7 +797,7 @@ const Clients = () => {
               </SelectContent>
             </Select>
             <Button
-              className="bg-green-500 hover:bg-green-600 text-white flex items-center gap-1"
+              className="bg-green-500 hover:bg-green-600 text-white flex items-center gap-1 dark:bg-green-600 dark:hover:bg-green-700"
               onClick={() => navigate('/admin/clients/new')}
             >
               <Plus className="w-4 h-4" />
@@ -729,12 +806,12 @@ const Clients = () => {
           </div>
         </div>
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="dark:bg-gray-800 dark:text-white">
           <DialogHeader>
             <DialogTitle>Excluir Cliente</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground dark:text-gray-300">
               Tem certeza que deseja excluir o cliente "{clientToDelete?.name}"?
               Esta ação não pode ser desfeita.
             </p>
@@ -762,12 +839,12 @@ const Clients = () => {
         onClose={() => setAssignBrokerOpen(false)}
       />
 
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6 dark:bg-gray-800 p-4 rounded-lg">
         <div className="flex items-center gap-4">
 
           <Button
             variant="default"
-            className="bg-orange-500 hover:bg-orange-600 text-white flex items-center gap-2"
+            className="bg-orange-500 hover:bg-orange-600 text-white flex items-center gap-2 dark:bg-orange-600 dark:hover:bg-orange-700"
             onClick={() => setIsKanbanView(!isKanbanView)}
             disabled={selectedStatus === 'pending'}
           >
@@ -779,7 +856,7 @@ const Clients = () => {
             onValueChange={setSelectedBroker}
             disabled={selectedStatus === 'pending' || !brokers.length || user?.role === 'corretor'}
           >
-            <SelectTrigger className="bg-white border border-gray-300 rounded-lg py-2 pl-4 pr-8 text-left shadow-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            <SelectTrigger className="bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg py-2 pl-4 pr-8 text-left shadow-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:text-white">
               {user?.role === 'corretor' ? getBrokerName(user.broker_id) : (selectedBroker ? getBrokerName(selectedBroker) : 'Selecione um corretor')}
             </SelectTrigger>
             <SelectContent>
@@ -799,7 +876,7 @@ const Clients = () => {
             <div className="flex gap-2">
               <Button
                 variant="default"
-                className="bg-blue-500 hover:bg-blue-600 text-white"
+                className="bg-blue-500 hover:bg-blue-600 text-white dark:bg-blue-600 dark:hover:bg-blue-700"
                 onClick={() => {
                   setSelectedStatus(null);
                   navigate('/admin/clients');
@@ -810,7 +887,7 @@ const Clients = () => {
               <Button
                 variant="outline"
                 size="sm"
-                className={`${selectedStatus === 'pending' ? 'bg-yellow-600' : 'bg-yellow-400'} hover:bg-yellow-500 text-white border-none flex items-center gap-1`}
+                className={`${selectedStatus === 'pending' ? 'bg-yellow-600' : 'bg-yellow-400'} hover:bg-yellow-500 text-white border-none flex items-center gap-1 dark:bg-yellow-600 dark:hover:bg-yellow-700`}
                 onClick={() => {
                   setSelectedStatus('pending');
                   navigate('/admin/clients?status=pending');
@@ -824,6 +901,11 @@ const Clients = () => {
           )}
         </div>
       </div>
+
+      {/* Controles de paginação superiores - apenas no modo lista */}
+      {!isKanbanView && filteredClients.length > itemsPerPage && (
+        <PaginationControls position="top" />
+      )}
 
       {loading ? (
         <div className="text-center py-4">Carregando...</div>
@@ -841,35 +923,35 @@ const Clients = () => {
             />
           ) : (
             <div className="space-y-4">
-              <div className="overflow-x-auto bg-white rounded-lg shadow">
+              <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Telefone</TableHead>
-                      <TableHead>CPF</TableHead>
-                      <TableHead>Corretor</TableHead>
-                      <TableHead>Agendamento</TableHead>
-                      <TableHead className="w-40 text-center">Ações</TableHead>
+                    <TableRow className="dark:bg-gray-700">
+                      <TableHead className="dark:text-white">Nome</TableHead>
+                      <TableHead className="dark:text-white">Email</TableHead>
+                      <TableHead className="dark:text-white">Telefone</TableHead>
+                      <TableHead className="dark:text-white">CPF</TableHead>
+                      <TableHead className="dark:text-white">Corretor</TableHead>
+                      <TableHead className="dark:text-white">Agendamento</TableHead>
+                      <TableHead className="w-40 text-center dark:text-white">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredClients.map((client) => (
-                      <TableRow key={client.id}>
-                        <TableCell>{client.name}</TableCell>
-                        <TableCell>{client.email}</TableCell>
-                        <TableCell>{client.phone}</TableCell>
-                        <TableCell>{client.cpf}</TableCell>
-                        <TableCell>{getBrokerName(client.broker_id)}</TableCell>
+                    {currentItems.map((client) => (
+                      <TableRow key={client.id} className="dark:border-gray-700 hover:dark:bg-gray-700">
+                        <TableCell className="dark:text-gray-300">{client.name}</TableCell>
+                        <TableCell className="dark:text-gray-300">{client.email}</TableCell>
+                        <TableCell className="dark:text-gray-300">{client.phone}</TableCell>
+                        <TableCell className="dark:text-gray-300">{client.cpf}</TableCell>
+                        <TableCell className="dark:text-gray-300">{getBrokerName(client.broker_id)}</TableCell>
                         <TableCell>
                           <span 
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              !client.scheduling ? 'bg-gray-100 text-gray-800' :
-                              client.scheduling === 'Aguardando' ? 'bg-yellow-100 text-yellow-800' :
-                              client.scheduling === 'Realizada' ? 'bg-green-100 text-green-800' :
-                              client.scheduling === 'Não realizada' ? 'bg-red-100 text-red-800' :
-                              'bg-gray-100 text-gray-800'
+                              !client.scheduling ? 'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-100' :
+                              client.scheduling === 'Aguardando' ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-100' :
+                              client.scheduling === 'Realizada' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-100' :
+                              client.scheduling === 'Não realizada' ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-100' :
+                              'bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-100'
                             }`}
                           >
                             {client.scheduling || 'Sem status'}
@@ -891,7 +973,7 @@ const Clients = () => {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleAssignBroker(client)}
-                                  className="w-full"
+                                  className="w-full dark:bg-blue-600 dark:hover:bg-blue-700 dark:text-white"
                                 >
                                   <Plus className="w-4 h-4 mr-2" />
                                   Atribuir ao Corretor
@@ -933,10 +1015,13 @@ const Clients = () => {
               </div>
             </div>
           )}
+          
+          {/* Controles de paginação inferiores - apenas no modo lista */}
+          {!isKanbanView && filteredClients.length > itemsPerPage && (
+            <PaginationControls position="bottom" />
+          )}
         </div>
       )}
-      
-
     </div>
   );
 };

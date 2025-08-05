@@ -542,31 +542,35 @@ const UpcomingAppointments: React.FC = () => {
     return (
       <div
         key={appointment.id}
-        className={`border rounded-lg p-4 ${isOverdue ? 'bg-red-50 border-red-200' : 'bg-white'}`}
+        className={`border rounded-lg p-4 ${
+          isOverdue 
+            ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-900/30' 
+            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+        }`}
       >
         {isOverdue && (
           <div className="mb-2">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200">
               Atrasado
             </span>
           </div>
         )}
         <div className="flex justify-between items-start">
           <div>
-            <h3 className="font-medium">{appointment.titulo}</h3>
-            <p className="text-sm text-muted-foreground">
+            <h3 className="font-medium text-gray-900 dark:text-gray-100">{appointment.titulo}</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               {format(parseISO(appointment.data), "EEEE, d 'de' MMMM", { locale: ptBR })}
               {' • '}
               {appointment.hora}
             </p>
             <div className="mt-2 space-y-1">
               <div className="flex items-center text-sm">
-                <span className="font-medium w-16">Cliente:</span>
-                <span className="ml-1">{appointment.client?.name || 'N/A'}</span>
+                <span className="font-medium w-16 text-gray-700 dark:text-gray-300">Cliente:</span>
+                <span className="ml-1 text-gray-900 dark:text-gray-100">{appointment.client?.name || 'N/A'}</span>
               </div>
               <div className="flex items-center text-sm">
-                <span className="font-medium w-16">Corretor:</span>
-                <span className="ml-1">
+                <span className="font-medium w-16 text-gray-700 dark:text-gray-300">Corretor:</span>
+                <span className="ml-1 text-gray-900 dark:text-gray-100">
                   {appointment.broker?.name || appointment.broker?.username || 'N/A'}
                 </span>
               </div>
@@ -594,7 +598,7 @@ const UpcomingAppointments: React.FC = () => {
                 appointment.status === 'Agendado' ? 'default' : 
                 appointment.status === 'Realizado' ? 'outline' : 'destructive'
               }
-              className={appointment.status === 'Realizado' ? 'bg-green-100 text-green-800 border-green-200' : ''}
+              className={`${appointment.status === 'Realizado' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border-green-200 dark:border-green-800' : ''} dark:border-gray-600`}
             >
               {appointment.status === 'Agendado' ? 'Agendado' : 
                appointment.status === 'Realizado' ? 'Realizado' : 'Não Realizado'}
@@ -602,8 +606,8 @@ const UpcomingAppointments: React.FC = () => {
           </div>
         </div>
         {appointment.descricao && (
-          <div className="mt-2 pt-2 border-t">
-            <p className="text-sm text-muted-foreground">
+          <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               {appointment.descricao}
             </p>
           </div>
@@ -612,7 +616,7 @@ const UpcomingAppointments: React.FC = () => {
           <Button
             variant="outline"
             size="sm"
-            className="h-7 text-xs"
+            className="h-7 text-xs text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
             onClick={() => {
               setSelectedAppointment(appointment);
               setIsStatusDialogOpen(true);
@@ -620,11 +624,11 @@ const UpcomingAppointments: React.FC = () => {
             disabled={updatingStatus[appointment.id]}
           >
             {updatingStatus[appointment.id] ? (
-              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              <Loader2 className="mr-1 h-3 w-3 animate-spin text-gray-700 dark:text-gray-300" />
             ) : (
-              <RefreshCw className="h-3 w-3 mr-1" />
+              <RefreshCw className="h-3 w-3 mr-1 text-gray-700 dark:text-gray-300" />
             )}
-            Atualizar status
+            <span className="text-gray-700 dark:text-gray-300">Atualizar status</span>
           </Button>
         </div>
       </div>
@@ -634,39 +638,47 @@ const UpcomingAppointments: React.FC = () => {
   // Diálogo de Remarcação
   const renderRescheduleDialog = () => (
     <AlertDialog open={!!rescheduleAppointment} onOpenChange={(open) => !open && setRescheduleAppointment(null)}>
-      <AlertDialogContent>
+      <AlertDialogContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
         <AlertDialogHeader>
-          <AlertDialogTitle>Remarcar Agendamento</AlertDialogTitle>
-          <AlertDialogDescription>
+          <AlertDialogTitle className="text-gray-900 dark:text-gray-100">Remarcar Agendamento</AlertDialogTitle>
+          <AlertDialogDescription className="text-gray-600 dark:text-gray-400">
             Selecione a nova data e horário para o agendamento.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-4">
           <div>
-            <Label>Nova Data</Label>
+            <Label className="text-gray-700 dark:text-gray-300">Nova Data</Label>
             <Input
               type="date"
               value={newAppointmentDate}
               onChange={(e) => setNewAppointmentDate(e.target.value)}
               min={new Date().toISOString().split('T')[0]}
-              className="mt-1"
+              className="mt-1 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
             />
           </div>
           <div>
-            <Label>Novo Horário</Label>
+            <Label className="text-gray-700 dark:text-gray-300">Novo Horário</Label>
             <Input
               type="time"
               value={newAppointmentTime}
               onChange={(e) => setNewAppointmentTime(e.target.value)}
-              className="mt-1"
+              className="mt-1 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
             />
           </div>
         </div>
         <AlertDialogFooter>
-          <Button variant="outline" onClick={() => setRescheduleAppointment(null)}>
+          <Button 
+            variant="outline" 
+            onClick={() => setRescheduleAppointment(null)}
+            className="text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
             Cancelar
           </Button>
-          <Button onClick={handleReschedule} disabled={!newAppointmentDate || !newAppointmentTime}>
+          <Button 
+            onClick={handleReschedule} 
+            disabled={!newAppointmentDate || !newAppointmentTime}
+            className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-800"
+          >
             Confirmar
           </Button>
         </AlertDialogFooter>
@@ -678,10 +690,10 @@ const UpcomingAppointments: React.FC = () => {
     <div className="space-y-6">
       {/* Seção de Tarefas Atrasadas */}
       {filteredOverdueAppointments.length > 0 && (
-        <Card>
+        <Card className="border-red-200 dark:border-red-900/30">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-medium text-red-700">
+              <CardTitle className="text-lg font-medium text-red-700 dark:text-red-300">
                 {user?.role === 'corretor' ? 'Minhas Tarefas Atrasadas' : 'Tarefas Atrasadas'}
                 <Badge variant="destructive" className="ml-2">
                   {filteredOverdueAppointments.length}
@@ -690,7 +702,7 @@ const UpcomingAppointments: React.FC = () => {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="h-8 w-8 p-0 relative"
+                className="h-8 w-8 p-0 relative text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
                 onClick={() => setShowOverdue(!showOverdue)}
               >
                 {showOverdue ? (
@@ -715,17 +727,17 @@ const UpcomingAppointments: React.FC = () => {
         </Card>
       )}
 
-      <Card>
+      <Card className="border-gray-200 dark:border-gray-700">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-medium">
+            <CardTitle className="text-lg font-medium text-gray-900 dark:text-gray-100">
               {user?.role === 'corretor' ? 'Minhas Próximas Tarefas' : 'Próximas Tarefas'}
             </CardTitle>
             {(user?.role === 'admin' || user?.role === 'dev') && (
               <Button 
                 size="sm" 
                 onClick={handleNewTask}
-                className="ml-4 gap-2"
+                className="ml-4 gap-2 bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-700 dark:hover:bg-blue-800"
               >
                 <Plus className="h-4 w-4" />
                 Nova Tarefa
@@ -734,7 +746,7 @@ const UpcomingAppointments: React.FC = () => {
             <Button 
               variant="ghost" 
               size="sm"
-              className="h-8 w-8 p-0 relative"
+              className="h-8 w-8 p-0 relative text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
               onClick={() => setShowUpcoming(!showUpcoming)}
             >
               {showUpcoming ? (
@@ -755,7 +767,7 @@ const UpcomingAppointments: React.FC = () => {
               <Loader2 className="h-8 w-8 animate-spin" />
             </div>
           ) : filteredAppointments.length === 0 ? (
-            <div className="text-center text-muted-foreground py-8">
+            <div className="text-center text-gray-600 dark:text-gray-400 py-8">
               Nenhum agendamento encontrado para os próximos dias.
             </div>
           ) : (
@@ -768,28 +780,28 @@ const UpcomingAppointments: React.FC = () => {
 
       {/* Diálogo de confirmação de status */}
       <AlertDialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
-        <AlertDialogContent className="sm:max-w-[425px]">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Atualizar status do agendamento</AlertDialogTitle>
+        <AlertDialogContent className="sm:max-w-[425px] bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          <AlertDialogHeader className="text-gray-900 dark:text-gray-100">
+            <AlertDialogTitle className="text-gray-900 dark:text-gray-100">Atualizar status do agendamento</AlertDialogTitle>
             <div className="flex flex-col space-y-2">
               <AlertDialogDescription asChild>
-                <span className="font-medium block">{selectedAppointment?.titulo}</span>
+                <span className="font-medium block text-gray-900 dark:text-gray-100">{selectedAppointment?.titulo}</span>
               </AlertDialogDescription>
-              <AlertDialogDescription className="text-sm text-muted-foreground">
+              <AlertDialogDescription className="text-sm text-gray-600 dark:text-gray-400">
                 {selectedAppointment?.client?.name} • {selectedAppointment?.data ? format(parseISO(selectedAppointment.data), "EEEE, d 'de' MMMM", { locale: ptBR }) : ''} • {selectedAppointment?.hora || ''}
               </AlertDialogDescription>
             </div>
           </AlertDialogHeader>
           
           <div className="grid gap-3 py-4">
-            <div className="text-sm text-muted-foreground mb-2">
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
               Selecione o novo status:
             </div>
             
             <div className="flex flex-col gap-2">
               <Button
                 variant="outline"
-                className="justify-start h-12 px-4 py-2 hover:bg-green-50 hover:text-green-700"
+                className="justify-start h-12 px-4 py-2 hover:bg-green-50 hover:text-green-700 dark:hover:bg-green-900/30 dark:hover:text-green-300 border-gray-200 dark:border-gray-600"
                 onClick={async () => {
                   if (selectedAppointment) {
                     await handleUpdateAppointmentStatus(selectedAppointment.id, 'Realizado');
@@ -800,15 +812,15 @@ const UpcomingAppointments: React.FC = () => {
                 <div className="flex items-center gap-3 w-full">
                   <div className="w-3 h-3 rounded-full bg-green-500"></div>
                   <div className="flex-1 text-left">
-                    <div className="font-medium">Realizado</div>
-                    <div className="text-xs text-muted-foreground">O agendamento foi concluído com sucesso</div>
+                    <div className="font-medium text-gray-900 dark:text-gray-100">Realizado</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">O agendamento foi concluído com sucesso</div>
                   </div>
                 </div>
               </Button>
               
               <Button
                 variant="outline"
-                className="justify-start h-12 px-4 py-2 hover:bg-red-50 hover:text-red-700"
+                className="justify-start h-12 px-4 py-2 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-300 border-gray-200 dark:border-gray-600"
                 onClick={async () => {
                   if (selectedAppointment) {
                     await handleUpdateAppointmentStatus(selectedAppointment.id, 'Nao_Realizado');
@@ -819,8 +831,8 @@ const UpcomingAppointments: React.FC = () => {
                 <div className="flex items-center gap-3 w-full">
                   <div className="w-3 h-3 rounded-full bg-red-500"></div>
                   <div className="flex-1 text-left">
-                    <div className="font-medium">Não Realizado</div>
-                    <div className="text-xs text-muted-foreground">O agendamento não pôde ser realizado</div>
+                    <div className="font-medium text-gray-900 dark:text-gray-100">Não Realizado</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">O agendamento não pôde ser realizado</div>
                   </div>
                 </div>
               </Button>
@@ -828,7 +840,9 @@ const UpcomingAppointments: React.FC = () => {
           </div>
           
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
+              Cancelar
+            </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

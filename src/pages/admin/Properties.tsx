@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/TempAuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
 
@@ -160,6 +160,16 @@ export const Properties = () => {
   const confirmDelete = async () => {
     if (!propertyToDelete) return;
     try {
+      // Primeiro, obtém os dados do imóvel para pegar as URLs das mídias
+      const { data: property, error: fetchError } = await supabase
+        .from('properties')
+        .select('*')
+        .eq('id', propertyToDelete.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Exclui o imóvel do banco de dados
       const { error } = await supabase
         .from('properties')
         .delete()
@@ -167,13 +177,79 @@ export const Properties = () => {
 
       if (error) throw error;
 
-      // Atualizar lista local
+      // Tenta excluir as mídias do armazenamento
+      try {
+        // Extrai os caminhos dos arquivos das URLs
+        const extractFilePath = (url: string) => {
+          if (!url) return null;
+          // Remove a parte da URL base do Supabase
+          const baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/`;
+          const filePath = url.replace(baseUrl, '');
+          // Remove o nome do bucket do início do caminho
+          const parts = filePath.split('/');
+          if (parts.length > 1) {
+            parts.shift(); // Remove o nome do bucket
+            return parts.join('/');
+          }
+          return null;
+        };
+
+        // Lista para armazenar as promessas de exclusão
+        const deletePromises = [];
+
+        // Adiciona a imagem principal para exclusão
+        if (property.image_url) {
+          const filePath = extractFilePath(property.image_url);
+          if (filePath) {
+            deletePromises.push(
+              supabase.storage
+                .from('publico')
+                .remove([filePath])
+                .then(({ error }) => {
+                  if (error) {
+                    console.error('Erro ao excluir imagem principal:', error);
+                  }
+                })
+            );
+          }
+        }
+
+        // Adiciona as mídias adicionais para exclusão
+        if (property.additional_media && Array.isArray(property.additional_media)) {
+          property.additional_media.forEach((media: any) => {
+            if (media.url) {
+              const filePath = extractFilePath(media.url);
+              if (filePath) {
+                deletePromises.push(
+                  supabase.storage
+                    .from('publico')
+                    .remove([filePath])
+                    .then(({ error }) => {
+                      if (error) {
+                        console.error('Erro ao excluir mídia adicional:', error);
+                      }
+                    })
+                );
+              }
+            }
+          });
+        }
+
+        // Aguarda todas as exclusões serem concluídas
+        await Promise.all(deletePromises);
+      } catch (storageError) {
+        console.error('Erro ao excluir arquivos de mídia:', storageError);
+        // Não interrompe o fluxo se houver erro na exclusão dos arquivos
+      }
+
+      // Atualiza a lista local
       setProperties(properties.filter(property => property.id !== propertyToDelete.id));
       setPropertyToDelete(null);
+      setDeleteDialogOpen(false);
       
       toast({
         title: "Sucesso",
-        description: "Imóvel removido com sucesso"
+        description: "Imóvel e suas mídias foram removidos com sucesso"
       });
     } catch (error) {
       console.error('Erro ao remover imóvel:', error);
@@ -192,30 +268,56 @@ export const Properties = () => {
 
   const filteredProperties = properties.filter(property => {
     // Se não houver nenhum filtro ativo, mostra todos os imóveis
-    if (!searchTerm && (locationFilter === 'Todos' || !locationFilter) && typeFilter === 'all' && statusFilter === 'all') {
+    if (!searchTerm && (locationFilter === 'Todos' || !locationFilter) && typeFilter === 'all' && statusFilter === 'all' && vendidoFilter === 'all') {
       return true;
     }
 
-    const matchesSearch = property.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = !searchTerm || 
+                         property.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          property.reference.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesLocation = locationFilter === 'Todos' || 
+    const matchesLocation = locationFilter === 'Todos' || !locationFilter || 
                           property.location.toLowerCase().includes(locationFilter.toLowerCase());
-    const matchesType = typeFilter === 'all' || property.type.toLowerCase() === typeFilter.toLowerCase();
+    const matchesType = typeFilter === 'all' || !typeFilter || 
+                       property.type.toLowerCase() === typeFilter.toLowerCase();
     const matchesStatus = statusFilter === 'all' || 
                          (statusFilter === 'active' && property.status === true) || 
                          (statusFilter === 'inactive' && property.status === false);
-                         
     const matchesVendido = vendidoFilter === 'all' ||
-                         (vendidoFilter === 'vendido' && property.vendido === true) ||
-                         (vendidoFilter === 'disponivel' && property.vendido === false);
-    
+                          (vendidoFilter === 'vendido' && property.vendido === true) ||
+                          (vendidoFilter === 'disponivel' && property.vendido === false);
+
     return matchesSearch && matchesLocation && matchesType && matchesStatus && matchesVendido;
   });
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto w-full">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Imóveis</h2>
+    <div className="container mx-auto p-4 md:p-6">
+      {/* Diálogo de confirmação de exclusão */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>Tem certeza que deseja excluir o imóvel <span className="font-semibold">{propertyToDelete?.title}</span>?</p>
+            <p className="text-sm text-muted-foreground mt-2">Esta ação não pode ser desfeita e todas as mídias associadas serão removidas.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDelete}
+              disabled={!propertyToDelete}
+            >
+              Confirmar Exclusão
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Imóveis</h1>
         <Button 
           onClick={() => navigate('/admin/properties/new')}
           className="bg-green-600 hover:bg-green-700 text-white"

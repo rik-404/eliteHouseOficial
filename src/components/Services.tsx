@@ -9,7 +9,7 @@ const services = [
     icon: <Search className="h-10 w-10 text-eliteOrange" />,
     title: 'Busque Seu Imóvel',
     description: 'Encontre o imóvel dos seus sonhos com nosso avançado sistema de busca e filtragem.',
-    link: '/properties'
+    link: '/imoveis'
   },
   {
     icon: <User className="h-10 w-10 text-eliteOrange" />,

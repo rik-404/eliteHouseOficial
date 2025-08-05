@@ -1,26 +1,41 @@
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import './lib/setupStorage';
+
+// Verifica se há uma nova versão do service worker
+const checkForUpdates = () => {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(registration => {
+      registration.update().catch(error => {
+        console.error('Erro ao verificar atualizações:', error);
+      });
+    });
+  }
+};
+
+// Verifica por atualizações quando a página carrega
+window.addEventListener('load', () => {
+  checkForUpdates();
+  
+  // Verifica por atualizações a cada 5 minutos
+  setInterval(checkForUpdates, 5 * 60 * 1000);
+  
+  // Verifica por atualizações quando a janela recebe foco
+  window.addEventListener('focus', checkForUpdates);
+});
+
+// Força a limpeza do cache ao carregar a página
+if ('caches' in window) {
+  caches.keys().then(cacheNames => {
+    cacheNames.forEach(cacheName => {
+      if (cacheName !== 'elite-house-hub-v1') {
+        caches.delete(cacheName);
+      }
+    });
+  });
+}
 
 createRoot(document.getElementById("root")!).render(
   <App />
 );
-
-// Registra o service worker para gerenciamento de cache
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js')
-      .then(registration => {
-        console.log('Service Worker registrado com sucesso:', registration.scope);
-        
-        // Verifica por atualizações a cada 60 minutos
-        setInterval(() => {
-          registration.update();
-          console.log('Verificando atualizações do Service Worker...');
-        }, 60 * 60 * 1000);
-      })
-      .catch(error => {
-        console.error('Erro ao registrar Service Worker:', error);
-      });
-  });
-}

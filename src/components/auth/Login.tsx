@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import CustomForm from '@/components/ui/CustomForm';
 import { Eye, EyeOff } from 'lucide-react';
+import { APP_NAME, APP_VERSION } from '@/constants/app';
 const Login = () => {
   const navigate = useNavigate();
   const { signIn } = useAuth();
@@ -103,7 +104,7 @@ const Login = () => {
             </button>
           </div>
           <div className="mt-8 text-center text-sm text-gray-400">
-            Versão 1.7.0
+            {APP_NAME} v{APP_VERSION}
           </div>
         </CustomForm>
       </div>

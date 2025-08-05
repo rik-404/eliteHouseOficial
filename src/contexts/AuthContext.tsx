@@ -55,10 +55,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
           if (!userData.active) {
             console.log('Usuário inativo');
+            signOut(); // Força logout se o usuário estiver inativo
             return;
           }
 
-          setUser(parsedUser);
+          const updatedUser = {
+            ...parsedUser,
+            ...userData
+          };
+
+          // Atualiza o usuário no estado e storage
+          setUser(updatedUser);
+          sessionStorage.setItem('currentUser', JSON.stringify(updatedUser));
+          localStorage.setItem('currentUser', JSON.stringify(updatedUser));
         }
       } catch (error) {
         console.error('Erro ao carregar usuário:', error);
@@ -68,7 +77,42 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     loadUser();
-  }, []);
+
+    // Configura o listener para atualizações em tempo real
+    const userSubscription = supabase
+      .channel('user_changes')
+      .on('postgres_changes', 
+        { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'users',
+          filter: user ? `id=eq.${user.id}` : undefined
+        }, 
+        (payload) => {
+          console.log('Mudança recebida do Supabase:', payload);
+          if (user && payload.new.id === user.id) {
+            const updatedUser = {
+              ...user,
+              ...payload.new
+            };
+            setUser(updatedUser);
+            sessionStorage.setItem('currentUser', JSON.stringify(updatedUser));
+            localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+            
+            // Se o usuário foi desativado, faz logout
+            if (!payload.new.active) {
+              signOut();
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    // Limpa a inscrição quando o componente é desmontado
+    return () => {
+      supabase.removeChannel(userSubscription);
+    };
+  }, [user?.id]); // Adiciona user.id como dependência
 
   // Faz login do usuário
   const signIn = async (username: string, password: string) => {

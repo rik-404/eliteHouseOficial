@@ -30,14 +30,14 @@ const CallToAction = () => {
               size="lg" 
               className="bg-eliteOrange hover:bg-eliteOrange-light text-white"
             >
-              <Link to="/properties">Ver Imóveis</Link>
+              <Link to="/imoveis">Ver Imóveis</Link>
             </Button>
             <Button 
               size="lg" 
               variant="primary"
               className="bg-eliteOrange hover:bg-eliteOrange-light text-white"
             >
-              <Link to="/contact">Fale Conosco</Link>
+              <Link to="/contato">Fale Conosco</Link>
             </Button>
           </div>
         </div>

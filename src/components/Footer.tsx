@@ -41,7 +41,7 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/properties" className="text-muted-foreground hover:text-eliteOrange transition-colors">
+                <Link to="/imoveis" className="text-muted-foreground hover:text-eliteOrange transition-colors">
                   Comprar
                 </Link>
               </li>
@@ -51,7 +51,7 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/contact" className="text-muted-foreground hover:text-eliteOrange transition-colors">
+                <Link to="/contato" className="text-muted-foreground hover:text-eliteOrange transition-colors">
                   Contato
                 </Link>
               </li>

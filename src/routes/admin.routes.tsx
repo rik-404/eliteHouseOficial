@@ -21,6 +21,10 @@ const ActivityLogs = lazy(() => import('../pages/admin/ActivityLogs').then(modul
 const ActivityLogsPage = () => (
   <ActivityLogs />
 );
+const contact = lazy(() => import('../pages/Contact'));
+const about = lazy(() => import('../pages/About'));
+const buy = lazy(() => import('../pages/Properties'));
+
 
 const Dashboard = lazy(() => import('../pages/admin/Dashboard'));
 const Users = lazy(() => import('../pages/admin/Users'));

@@ -143,10 +143,24 @@ export const NewClient = () => {
 
   // Função para formatar CPF
   const formatCPF = (cpf: string) => {
-    return cpf.replace(/\D/g, '')
+    // Remove tudo que não for dígito
+    const value = cpf.replace(/\D/g, '');
+    
+    // Limita a 11 dígitos
+    const limitedValue = value.slice(0, 11);
+    
+    // Aplica a formatação
+    return limitedValue
       .replace(/(\d{3})(\d)/, '$1.$2')
       .replace(/(\d{3})(\d)/, '$1.$2')
       .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  };
+  
+  // Função para lidar com a mudança do CPF
+  const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/\D/g, '');
+    const formattedValue = formatCPF(rawValue);
+    setClient({ ...client, cpf: formattedValue });
   };
 
   // Função para formatar PIS
@@ -298,18 +312,18 @@ export const NewClient = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 bg-white rounded-lg shadow-md">
+    <div className="max-w-4xl mx-auto p-4 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg shadow-md">
       <div className="flex justify-between items-center mb-4">
         <Button
           variant="default"
           onClick={() => navigate('/admin/clients')}
-          className="bg-orange-500 hover:bg-orange-600 text-white"
+          className="bg-orange-600 hover:bg-orange-700 text-white dark:bg-orange-700 dark:hover:bg-orange-800"
         >
           Voltar
         </Button>
       </div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Criar Novo Cliente</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Criar Novo Cliente</h1>
       </div>
       <CustomForm onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -319,7 +333,7 @@ export const NewClient = () => {
               id="name"
               value={client.name}
               onChange={(e) => setClient({ ...client, name: e.target.value })}
-
+              className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
             />
           </div>
           <div>
@@ -327,8 +341,10 @@ export const NewClient = () => {
             <Input
               id="cpf"
               value={client.cpf}
-              onChange={(e) => setClient({ ...client, cpf: e.target.value })}
+              onChange={handleCPFChange}
               placeholder="000.000.000-00"
+              maxLength={14}
+              className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
             />
           </div>
           <div>
@@ -338,6 +354,7 @@ export const NewClient = () => {
               value={client.rg || ''}
               onChange={(e) => setClient({ ...client, rg: e.target.value })}
               placeholder="00.000.000-0"
+              className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
             />
           </div>
           <div>
@@ -347,6 +364,7 @@ export const NewClient = () => {
               type="date"
               value={client.birth_date || ''}
               onChange={(e) => setClient({ ...client, birth_date: e.target.value })}
+              className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
             />
           </div>
           <div>
@@ -356,6 +374,7 @@ export const NewClient = () => {
               value={client.pis || ''}
               onChange={(e) => setClient({ ...client, pis: e.target.value })}
               placeholder="000.00000.00-0"
+              className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
             />
           </div>
           <div>
@@ -365,7 +384,7 @@ export const NewClient = () => {
               type="email"
               value={client.email}
               onChange={(e) => setClient({ ...client, email: e.target.value })}
-
+              className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
             />
           </div>
           <div>
@@ -374,7 +393,7 @@ export const NewClient = () => {
               id="phone"
               value={client.phone}
               onChange={(e) => setClient({ ...client, phone: e.target.value })}
-
+              className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
             />
           </div>
           <div>
@@ -383,12 +402,16 @@ export const NewClient = () => {
               value={client.salary_range?.toString() || ''}
               onValueChange={(value) => setClient({ ...client, salary_range: value ? Number(value) : null })}
             >
-              <SelectTrigger>
+              <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:ring-orange-500">
                 <SelectValue placeholder="Selecione uma faixa salarial" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
                 {[1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000, 6500, 7000, 7500, 8000, 8500, 9000, 9500, 10000].map((value) => (
-                  <SelectItem key={value} value={value.toString()}>
+                  <SelectItem 
+                    key={value} 
+                    value={value.toString()}
+                    className="hover:bg-gray-100 dark:hover:bg-gray-600 focus:bg-gray-100 dark:focus:bg-gray-600"
+                  >
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)}
                   </SelectItem>
                 ))}
@@ -399,22 +422,25 @@ export const NewClient = () => {
           <div>
             <Label htmlFor="broker_id">Corretor <span className="text-red-500">*</span></Label>
             {user?.role === 'corretor' ? (
-              <div className="text-gray-500">
+              <div className="text-gray-700 dark:text-gray-300">
                 Corretor: {user?.name || user?.username}
               </div>
             ) : (
               <Select
                 value={client.broker_id}
                 onValueChange={(value) => setClient({ ...client, broker_id: value })}
-  
                 disabled={loading || noBrokers}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:ring-orange-500">
                   <SelectValue placeholder={loading ? 'Carregando corretores...' : noBrokers ? 'Nenhum corretor encontrado' : 'Selecionar corretor'} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
                   {brokers.map((broker) => (
-                    <SelectItem key={broker.id} value={broker.broker_id}>
+                    <SelectItem 
+                      key={broker.id} 
+                      value={broker.broker_id}
+                      className="hover:bg-gray-100 dark:hover:bg-gray-600 focus:bg-gray-100 dark:focus:bg-gray-600"
+                    >
                       {broker.name}
                     </SelectItem>
                   ))}
@@ -422,7 +448,7 @@ export const NewClient = () => {
               </Select>
             )}
             {noBrokers && (
-              <p className="mt-2 text-sm text-red-500">
+              <p className="mt-2 text-sm text-red-600 dark:text-red-400">
                 Por favor, cadastre um corretor primeiro
               </p>
             )}
@@ -435,7 +461,7 @@ export const NewClient = () => {
               id="cep"
               value={client.cep}
               onChange={handleCEPChange}
-
+              className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
             />
           </div>
           <div>
@@ -444,7 +470,7 @@ export const NewClient = () => {
               id="street"
               value={client.street}
               onChange={(e) => setClient({ ...client, street: e.target.value })}
-
+              className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
             />
           </div>
           <div>
@@ -453,7 +479,7 @@ export const NewClient = () => {
               id="number"
               value={client.number}
               onChange={(e) => setClient({ ...client, number: e.target.value })}
-
+              className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
             />
           </div>
           <div>
@@ -462,7 +488,7 @@ export const NewClient = () => {
               id="neighborhood"
               value={client.neighborhood}
               onChange={(e) => setClient({ ...client, neighborhood: e.target.value })}
-
+              className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
             />
           </div>
           <div>
@@ -471,7 +497,7 @@ export const NewClient = () => {
               id="city"
               value={client.city}
               onChange={(e) => setClient({ ...client, city: e.target.value })}
-
+              className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
             />
           </div>
           <div>
@@ -480,7 +506,7 @@ export const NewClient = () => {
               id="state"
               value={client.state}
               onChange={(e) => setClient({ ...client, state: e.target.value })}
-
+              className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
             />
           </div>
           <div>
@@ -489,6 +515,7 @@ export const NewClient = () => {
               id="complement"
               value={client.complement}
               onChange={(e) => setClient({ ...client, complement: e.target.value })}
+              className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
             />
           </div>
           <div>
@@ -498,6 +525,7 @@ export const NewClient = () => {
               value={client.origin}
               onChange={(e) => setClient({ ...client, origin: e.target.value })}
               placeholder="Ex: Site, Indicação, etc."
+              className="bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 focus:border-orange-500 focus:ring-orange-500"
             />
           </div>
         </div>
@@ -505,7 +533,7 @@ export const NewClient = () => {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full bg-green-500 hover:bg-green-600 text-white"
+            className="w-full bg-green-600 hover:bg-green-700 text-white dark:bg-green-700 dark:hover:bg-green-800"
           >
             {loading ? 'Criando...' : 'Criar Cliente'}
           </Button>

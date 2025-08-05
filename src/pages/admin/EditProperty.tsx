@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/TempAuthContext';
 import { Button } from '@/components/ui/button';
+import { PropertyFormData } from '@/types/property';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
@@ -13,18 +14,35 @@ import { useToast } from '@/hooks/use-toast';
 import MediaManager, { MediaItem } from '@/components/admin/MediaManager';
 import CustomForm from '@/components/ui/CustomForm';
 
+// Definindo o tipo para as mídias adicionais
+type MediaType = 'image' | 'video' | 'youtube';
+
+interface AdditionalMedia {
+  url: string;
+  type: MediaType;
+  thumbnail?: string;
+  isNew?: boolean; // Adicionado para controle de novas mídias
+}
+
 const EditProperty = () => {
+  // Função para extrair ID do YouTube de uma URL
+  const extractYoutubeId = (url: string): string | null => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const [property, setProperty] = useState({
+  const [property, setProperty] = useState<PropertyFormData & { additional_media: AdditionalMedia[] }>({
     reference: '',
     title: '',
     type: '',
     location: '',
-    city: '',
-    uf: '',
+    city: 'Piracicaba',
+    uf: 'SP',
     area: '',
     bedrooms: '',
     bathrooms: '',
@@ -32,14 +50,14 @@ const EditProperty = () => {
     price: '',
     description: '',
     image_url: '',
-    additional_images: [] as string[],
-    additional_media: [] as Array<{url: string; type: 'image' | 'video' | 'youtube'}>,
+    additional_media: [],
     featured: false,
     status: true, // true para ativo, false para inativo
     vendido: false
   });
   
-  const [medias, setMedias] = useState<MediaItem[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<MediaItem[]>([]);
+  const [mainImage, setMainImage] = useState('');
   const [uploading, setUploading] = useState(false);
   const [initialMediasLoaded, setInitialMediasLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -56,101 +74,16 @@ const EditProperty = () => {
 
         if (error) throw error;
         
-        const propertyData = {
+        const propertyData: PropertyFormData & { additional_media: AdditionalMedia[] } = {
           ...data,
           status: Boolean(data.status),
           vendido: Boolean(data.vendido),
           featured: Boolean(data.featured),
-          additional_images: data.additional_images || [],
-          additional_media: data.additional_media || []
+          additional_media: data.additional_media || [],
+          broker_id: data.broker_id || user?.broker_id || null
         };
         
         setProperty(propertyData);
-        
-        const initialMedias: MediaItem[] = [];
-        
-        // Adiciona a imagem principal
-        if (propertyData.image_url) {
-          initialMedias.push({ 
-            url: propertyData.image_url, 
-            type: 'image', 
-            isNew: false 
-          });
-        }
-        
-        // Adiciona mídias adicionais do campo additional_media
-        if (Array.isArray(propertyData.additional_media)) {
-          propertyData.additional_media.forEach(media => {
-            if (media.url && media.type) {
-              // Se for uma URL remota, verifica se é uma imagem para converter
-              if (media.type === 'image' && !media.url.startsWith('data:image')) {
-                // Se for uma URL remota, converte para base64
-                fetch(media.url)
-                  .then(response => response.blob())
-                  .then(blob => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                      const base64data = reader.result as string;
-                      // Atualiza a URL para a versão base64
-                      media.url = base64data;
-                      // Atualiza o estado com a nova URL
-                      setMedias(prev => [
-                        ...prev.filter(m => m.url !== media.url),
-                        { url: base64data, type: 'image', isNew: false }
-                      ]);
-                    };
-                    reader.readAsDataURL(blob);
-                  })
-                  .catch(error => {
-                    console.error('Erro ao converter imagem remota:', error);
-                  });
-              }
-              
-              initialMedias.push({ 
-                url: media.url, 
-                type: media.type, 
-                isNew: false 
-              });
-            }
-          });
-        }
-        
-        // Adiciona imagens adicionais do campo legado additional_images
-        if (Array.isArray(propertyData.additional_images)) {
-          propertyData.additional_images.forEach(url => {
-            if (url && !initialMedias.some(m => m.url === url)) {
-              // Se for uma URL remota, converte para base64
-              if (!url.startsWith('data:image')) {
-                fetch(url)
-                  .then(response => response.blob())
-                  .then(blob => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                      const base64data = reader.result as string;
-                      // Atualiza o estado com a nova URL
-                      setMedias(prev => [
-                        ...prev.filter(m => m.url !== url),
-                        { url: base64data, type: 'image', isNew: false }
-                      ]);
-                    };
-                    reader.readAsDataURL(blob);
-                  })
-                  .catch(error => {
-                    console.error('Erro ao converter imagem remota:', error);
-                  });
-              }
-              
-              initialMedias.push({ 
-                url, 
-                type: 'image', 
-                isNew: false 
-              });
-            }
-          });
-        }
-        
-        setMedias(initialMedias);
-        setInitialMediasLoaded(true);
       } catch (error) {
         console.error('Erro ao carregar imóvel:', error);
         toast({
@@ -170,6 +103,48 @@ const EditProperty = () => {
       navigate('/admin/properties');
     }
   }, [id, navigate, toast]);
+
+  useEffect(() => {
+    const loadInitialMedias = async () => {
+      if (property.image_url && !initialMediasLoaded) {
+        const initialMedias: MediaItem[] = [];
+        
+        // Adiciona a imagem principal
+        if (property.image_url) {
+          initialMedias.push({
+            url: property.image_url,
+            type: 'image',
+            isNew: false
+          });
+        }
+        
+        // Adiciona mídias adicionais
+        if (property.additional_media && Array.isArray(property.additional_media)) {
+          property.additional_media.forEach(media => {
+            const validTypes: MediaType[] = ['image', 'video', 'youtube'];
+            const mediaType = validTypes.includes(media.type as MediaType) 
+              ? media.type as MediaType 
+              : 'image'; // Valor padrão se o tipo for inválido
+              
+            if (media.url && mediaType) {
+              initialMedias.push({
+                url: media.url,
+                type: mediaType,
+                isNew: false,
+                ...(media.thumbnail && { thumbnail: media.thumbnail })
+              });
+            }
+          });
+        }
+        
+        setMediaFiles(initialMedias);
+        setMainImage(property.image_url);
+        setInitialMediasLoaded(true);
+      }
+    };
+    
+    loadInitialMedias();
+  }, [property.image_url, property.additional_media, initialMediasLoaded]);
 
   if (loading) {
     return <div className="text-center py-8">Carregando...</div>;
@@ -212,89 +187,75 @@ const EditProperty = () => {
     } as const));
   };
 
-  const handleMediaChange = (updatedMedias: Array<{ url: string; type: 'image' | 'video' | 'youtube' }>, mainImageUrl: string) => {
-    setMedias(updatedMedias);
+  const handleMediaChange = (updatedMedias: MediaItem[], mainImageUrl: string) => {
+    setMediaFiles(updatedMedias);
     setProperty(prev => ({
       ...prev,
       image_url: mainImageUrl
     }));
   };
 
-  const uploadNewMedias = async (): Promise<{url: string; type: 'image' | 'video' | 'youtube'}[]> => {
-    const newMedias = medias.filter(media => media.isNew && (media.file || media.type === 'youtube'));
-    const uploadedMedias: {url: string; type: 'image' | 'video' | 'youtube'}[] = [];
-    
-    for (const media of newMedias) {
-      try {
-        // Se for uma imagem, converte para base64 para armazenamento local
-        if (media.file && media.type === 'image') {
-          const reader = new FileReader();
-          
-          const base64Data = await new Promise<string>((resolve, reject) => {
-            reader.onload = (event) => resolve(event.target?.result as string);
-            reader.onerror = (error) => reject(error);
-            reader.readAsDataURL(media.file!);
-          });
-          
-          uploadedMedias.push({
-            url: base64Data,
-            type: 'image'
-          });
-        } else if (media.file) {
-          // Para vídeos, continua usando o armazenamento remoto
-          const timestamp = Date.now();
-          const randomId = Math.random().toString(36).substring(2, 7);
-          const fileExt = media.file.name.split('.').pop();
-          const filePath = `properties/${timestamp}-${randomId}.${fileExt}`;
-          
-          const { data, error } = await supabase.storage
-            .from('properties')
-            .upload(filePath, media.file);
-          
-          if (error) throw error;
-          
-          const publicUrl = supabase.storage
-            .from('properties')
-            .getPublicUrl(data.path).data.publicUrl;
-          
-          uploadedMedias.push({
-            url: publicUrl,
-            type: 'video'
-          });
-        }
-      } catch (error) {
-        console.error('Erro ao processar a mídia:', error);
-        throw error;
-      }
-    }
-    
-    return uploadedMedias;
+  const uploadNewMedias = async (): Promise<AdditionalMedia[]> => {
+    // Como o MediaManager já fez o upload das mídias, apenas mapeamos para o formato esperado
+    return mediaFiles
+      .filter(media => media.isNew) // Apenas mídias novas
+      .map(media => ({
+        url: media.url,
+        type: media.type,
+        ...(media.thumbnail && { thumbnail: media.thumbnail })
+      }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validar campos obrigatórios
+    if (!property.title || !property.type || !property.location) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha todos os campos obrigatórios",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Validar imagens
+    if (mediaFiles.length === 0) {
+      toast({
+        title: "Imagem obrigatória",
+        description: "Adicione pelo menos uma imagem do imóvel",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Validar imagem principal
+    if (!mainImage || !mediaFiles.some(media => media.type === 'image' && media.url === mainImage)) {
+      toast({
+        title: "Imagem principal",
+        description: "Selecione uma imagem principal para o imóvel",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setUploading(true);
 
+    // Validar campos obrigatórios
     try {
-      // Fazer upload das novas mídias
+      // Primeiro, fazer upload das novas mídias
       const uploadedMedias = await uploadNewMedias();
       
       // Combinar mídias existentes com as novas
-      const existingMedias = medias
-        .filter(media => !media.isNew)
-        .map(media => ({
-          url: media.url,
-          type: media.type
-        }));
-      
+      const existingMedias = property.additional_media.map(media => ({
+        url: media.url,
+        type: media.type as 'image' | 'video' | 'youtube',
+        ...(media.thumbnail && { thumbnail: media.thumbnail })
+      }));
+
       const allMedias = [...existingMedias, ...uploadedMedias];
       
-      // Separar a imagem principal das outras mídias
-      const mainImage = property.image_url || (allMedias[0]?.url || '');
-      const additionalMedia = allMedias
-        .filter(media => media.url !== mainImage)
-        .map(({ url, type }) => ({ url, type }));
-
+      // Preparar dados para atualização
       const updateData = {
         reference: property.reference,
         title: property.title,
@@ -309,12 +270,20 @@ const EditProperty = () => {
         price: parseFloat(property.price) || 0,
         description: property.description,
         image_url: mainImage,
-        additional_media: additionalMedia,
+        additional_media: allMedias
+          .filter(media => media.url !== mainImage)
+          .map(media => ({
+            url: media.url,
+            type: media.type,
+            ...(media.thumbnail && { thumbnail: media.thumbnail })
+          })),
         featured: property.featured,
+        status: property.vendido ? false : Boolean(property.status), // Se vendido, status = false (inativo)
         vendido: property.vendido,
-        status: property.vendido ? false : Boolean(property.status)
+        broker_id: property.broker_id || user?.broker_id || null // Mantém o broker_id existente ou usa o do usuário atual
       };
 
+      // Atualizar o imóvel no banco de dados
       const { error } = await supabase
         .from('properties')
         .update(updateData)
@@ -322,11 +291,13 @@ const EditProperty = () => {
 
       if (error) throw error;
 
+      // Se chegou até aqui, o imóvel foi atualizado com sucesso
       toast({
         title: "Sucesso",
         description: "Imóvel atualizado com sucesso"
       });
 
+      // Redirecionar de volta para a lista de imóveis
       navigate('/admin/properties');
     } catch (error) {
       console.error('Erro ao atualizar imóvel:', error);
@@ -350,9 +321,12 @@ const EditProperty = () => {
             <h3 className="text-lg font-medium mb-4">Mídias do Imóvel</h3>
             {initialMediasLoaded && (
               <MediaManager
-                initialMedias={medias}
-                mainImageUrl={property.image_url}
-                onChange={handleMediaChange}
+                initialMedias={mediaFiles}
+                mainImageUrl={mainImage}
+                onChange={(updatedMedias: MediaItem[], mainImg: string) => {
+                  setMediaFiles(updatedMedias);
+                  setMainImage(mainImg);
+                }}
                 maxFiles={15}
               />
             )}
@@ -502,16 +476,7 @@ const EditProperty = () => {
                 required
               />
             </div>
-            <div className="admin-form-group">
-              <Label htmlFor="property-image">Imagem</Label>
-              <Input
-                id="property-image"
-                name="image_url"
-                value={property.image_url}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
+            {/* Gerenciador de mídia foi movido para o topo do formulário */}
             <div className="admin-form-group">
               <Label htmlFor="property-featured">Destaque</Label>
               {user?.role === 'corretor' ? (

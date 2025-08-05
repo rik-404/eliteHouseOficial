@@ -47,16 +47,48 @@ export const uploadFileWithRetry = async (
   try {
     console.log(`Tentando upload direto para o bucket público...`);
     
-    // Usar um caminho simples com timestamp para evitar conflitos
-    const publicPath = `docs/${timestamp}-${randomId}.pdf`;
+    // Extrai a extensão do arquivo original
+    const fileExt = file.name.split('.').pop();
+    // Define o caminho baseado no tipo de arquivo (imagem ou vídeo)
+    const fileType = file.type.startsWith('image/') ? 'images' : 
+                    file.type.startsWith('video/') ? 'videos' : 'other';
     
-    // Configurar opções para ignorar RLS
+    // Cria um caminho único para o arquivo
+    const publicPath = `${fileType}/${timestamp}-${randomId}.${fileExt}`;
+    
+    // Configurar opções de upload
+    // Obtém a extensão do arquivo para determinar o tipo MIME
+    const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+    let mimeType = file.type;
+    
+    // Mapeia extensões comuns para seus tipos MIME
+    if (!mimeType || mimeType === 'application/octet-stream') {
+      const mimeTypes: Record<string, string> = {
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'gif': 'image/gif',
+        'webp': 'image/webp',
+        'mp4': 'video/mp4',
+        'webm': 'video/webm',
+        'mov': 'video/quicktime'
+      };
+      
+      if (fileExtension && mimeTypes[fileExtension]) {
+        mimeType = mimeTypes[fileExtension];
+      } else {
+        mimeType = 'application/octet-stream';
+      }
+    }
+    
     const publicOptions = {
       ...uploadOptions,
       upsert: true,
-      // Adicionar headers para tentar contornar restrições
-      duplex: 'half',
-      cacheControl: '0'
+      cacheControl: '3600',
+      // Permite que o arquivo seja acessado publicamente
+      public: true,
+      // Define o tipo de conteúdo correto
+      contentType: mimeType
     };
     
     // Tentar upload para o bucket público
@@ -92,12 +124,37 @@ export const uploadFileWithRetry = async (
  * @param filePath Caminho do arquivo
  * @param bucket Bucket onde o arquivo está armazenado (opcional, padrão: 'publico')
  */
-export const getPublicUrl = (filePath: string, bucket: string = 'publico'): string => {
-  const { data } = supabase.storage
-    .from(bucket)
-    .getPublicUrl(filePath);
+export const getPublicUrl = (filePath: string | undefined, bucket: string = 'publico'): string => {
+  if (!filePath) return '';
   
-  return data?.publicUrl || '';
+  // Se já for uma URL completa, retorna direto
+  if (filePath.startsWith('http')) {
+    return filePath;
+  }
+  
+  // Se for um caminho que começa com 'publico/', remove o prefixo
+  if (filePath.startsWith('publico/')) {
+    filePath = filePath.substring(8);
+  }
+  
+  // Remove a barra inicial do caminho, se existir
+  const cleanPath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+  
+  // Obtém a URL base do Supabase do environment
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+  
+  // Se não tivermos a URL do Supabase, tenta usar o método padrão
+  if (!supabaseUrl) {
+    const { data } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(cleanPath);
+    
+    return data?.publicUrl || '';
+  }
+  
+  // Constrói a URL manualmente para garantir que seja acessível
+  // Formato: https://[project-ref].supabase.co/storage/v1/object/public/[bucket]/[filePath]
+  return `${supabaseUrl}/storage/v1/object/public/${bucket}/${cleanPath}`;
 };
 
 /**

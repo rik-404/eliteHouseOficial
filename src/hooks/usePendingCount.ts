@@ -17,13 +17,35 @@ export const usePendingCount = () => {
 
   // Função para tocar o som de notificação
   const playNotificationSound = useCallback(() => {
-    const audio = new Audio('/sounds/notification.mp3');
-    audio.volume = 0.5;
-    audio.play().catch(e => {
+    try {
+      // Verifica se o usuário já interagiu com a página
+      if (document.visibilityState === 'visible') {
+        const audio = new Audio('/sounds/notification.mp3');
+        audio.volume = 0.5;
+        
+        // Tenta reproduzir o áudio
+        const playPromise = audio.play();
+        
+        // Se a reprodução for bloqueada, aguarda a interação do usuário
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            console.log('A reprodução foi bloqueada. Aguardando interação do usuário...');
+            
+            // Adiciona um listener para tentar reproduzir quando o usuário interagir
+            const handleUserInteraction = () => {
+              audio.play().catch(console.error);
+              document.removeEventListener('click', handleUserInteraction);
+              document.removeEventListener('keydown', handleUserInteraction);
+            };
+            
+            document.addEventListener('click', handleUserInteraction);
+            document.addEventListener('keydown', handleUserInteraction);
+          });
+        }
+      }
+    } catch (e) {
       console.error('Erro ao reproduzir notificação:', e);
-      // Tenta novamente com um pequeno atraso em caso de erro
-      setTimeout(() => audio.play().catch(console.error), 300);
-    });
+    }
   }, []);
 
   // Efeito para verificar se deve mostrar o popup

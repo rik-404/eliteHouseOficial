@@ -19,6 +19,8 @@ const Users = () => {
   const [loading, setLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [noPermission, setNoPermission] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   // Estados relacionados à confirmação com senha foram removidos
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
@@ -150,10 +152,88 @@ const Users = () => {
     : true)
   );
 
+  // Cálculo da paginação
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+
+  // Componente de paginação reutilizável
+  const PaginationControls = ({ position = 'bottom' }) => (
+    <div className={`flex items-center justify-between ${position === 'top' ? 'mb-4' : 'mt-4'}`}>
+      <div className="text-sm text-gray-500">
+        Mostrando {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredUsers.length)} de {filteredUsers.length} usuários
+      </div>
+      <div className="flex space-x-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
+        >
+          Anterior
+        </Button>
+        <div className="flex items-center space-x-1">
+          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            // Mostra no máximo 5 páginas de cada vez
+            let pageNum;
+            if (totalPages <= 5) {
+              pageNum = i + 1;
+            } else if (currentPage <= 3) {
+              pageNum = i + 1;
+            } else if (currentPage >= totalPages - 2) {
+              pageNum = totalPages - 4 + i;
+            } else {
+              pageNum = currentPage - 2 + i;
+            }
+            
+            return (
+              <Button
+                key={pageNum}
+                variant={currentPage === pageNum ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCurrentPage(pageNum)}
+                className={currentPage === pageNum ? "bg-blue-500 text-white" : ""}
+              >
+                {pageNum}
+              </Button>
+            );
+          })}
+          {totalPages > 5 && currentPage < totalPages - 2 && (
+            <span className="px-2">...</span>
+          )}
+          {totalPages > 5 && currentPage < totalPages - 2 && (
+            <Button
+              variant={currentPage === totalPages ? "default" : "outline"}
+              size="sm"
+              onClick={() => setCurrentPage(totalPages)}
+              className={currentPage === totalPages ? "bg-blue-500 text-white" : ""}
+            >
+              {totalPages}
+            </Button>
+          )}
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+          disabled={currentPage === totalPages}
+        >
+          Próxima
+        </Button>
+      </div>
+    </div>
+  );
+
+  // Efeito para voltar para a primeira página quando os filtros mudarem
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [search, roleFilter]);
+
   return (
-    <div className="container mx-auto p-4 space-y-6">
+    <div className="container mx-auto p-4 space-y-6 dark:bg-gray-900 dark:text-gray-100 min-h-screen">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Usuários</h1>
+        <h1 className="text-2xl font-semibold dark:text-white">Usuários</h1>
         <Button 
           onClick={() => navigate('/admin/users/create')}
           className="bg-green-600 hover:bg-green-700 text-white"
@@ -171,7 +251,7 @@ const Users = () => {
               placeholder="Pesquisar..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10"
+              className="pl-10 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
             />
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
           </div>
@@ -181,7 +261,7 @@ const Users = () => {
             value={roleFilter}
             onValueChange={setRoleFilter}
           >
-            <SelectTrigger>
+            <SelectTrigger className="dark:bg-gray-800 dark:border-gray-700 dark:text-white">
               <SelectValue placeholder="Filtrar por Cargo" />
             </SelectTrigger>
             <SelectContent>
@@ -194,25 +274,30 @@ const Users = () => {
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-md">
+      {/* Controles de paginação superiores */}
+      {filteredUsers.length > itemsPerPage && (
+        <PaginationControls position="top" />
+      )}
+
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
         <Table className="w-full">
           <TableHeader>
             <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Username</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Cargo</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Ações</TableHead>
+              <TableHead className="dark:text-white">Nome</TableHead>
+              <TableHead className="dark:text-white">Username</TableHead>
+              <TableHead className="dark:text-white">Email</TableHead>
+              <TableHead className="dark:text-white">Cargo</TableHead>
+              <TableHead className="dark:text-white">Status</TableHead>
+              <TableHead className="dark:text-white">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredUsers.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell>{user.name}</TableCell>
-                <TableCell>{user.username}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>{user.role}</TableCell>
+            {currentItems.map((user) => (
+              <TableRow key={user.id} className="dark:border-gray-700 hover:dark:bg-gray-700">
+                <TableCell className="dark:text-gray-300">{user.name}</TableCell>
+                <TableCell className="dark:text-gray-300">{user.username}</TableCell>
+                <TableCell className="dark:text-gray-300">{user.email}</TableCell>
+                <TableCell className="dark:text-gray-300">{user.role}</TableCell>
                 <TableCell>
                   <Switch
                     checked={user.active}
@@ -240,7 +325,7 @@ const Users = () => {
                     <Button
                       variant="outline"
                       onClick={() => navigate(`/admin/users/${user.id}/edit`)}
-                      className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                      className="bg-yellow-500 hover:bg-yellow-600 text-white dark:bg-yellow-600 dark:hover:bg-yellow-700"
                     >
                       <Pencil className="h-4 w-4 mr-2" /> Editar
                     </Button>
@@ -281,22 +366,26 @@ const Users = () => {
           </TableBody>
         </Table>
       </div>
+
+      {filteredUsers.length > itemsPerPage && (
+        <PaginationControls position="bottom" />
+      )}
       {confirmDelete && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg w-96">
-            <h2 className="text-lg font-semibold mb-4">Confirmar Exclusão</h2>
-            <p className="mb-6">Tem certeza que deseja excluir este usuário?</p>
+        <div className="fixed inset-0 bg-black/70 dark:bg-black/80 flex items-center justify-center">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-96">
+            <h2 className="text-lg font-semibold mb-4 dark:text-white">Confirmar Exclusão</h2>
+            <p className="mb-6 dark:text-gray-300">Tem certeza que deseja excluir este usuário?</p>
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
                 onClick={() => setConfirmDelete(null)}
-                className="bg-gray-800 hover:bg-gray-700 text-white"
+                className="bg-gray-800 hover:bg-gray-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700"
               >
                 Cancelar
               </Button>
               <Button
                 onClick={() => confirmDeleteUser()}
-                className="bg-gray-800 hover:bg-gray-700 text-white"
+                className="bg-gray-800 hover:bg-gray-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700"
               >
                 Excluir
               </Button>
@@ -305,15 +394,15 @@ const Users = () => {
         </div>
       )}
       {noPermission && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg w-96">
-            <h2 className="text-lg font-semibold mb-4">Acesso Negado</h2>
-            <p className="mb-6">Você não tem permissão para editar este usuário.</p>
+        <div className="fixed inset-0 bg-black/70 dark:bg-black/80 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-96">
+            <h2 className="text-lg font-semibold mb-4 dark:text-white">Acesso Negado</h2>
+            <p className="mb-6 dark:text-gray-300">Você não tem permissão para executar esta ação.</p>
             <div className="flex justify-end">
               <Button
                 variant="outline"
                 onClick={() => setNoPermission(false)}
-                className="bg-gray-800 hover:bg-gray-700 text-white"
+                className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700"
               >
                 Fechar
               </Button>
