@@ -1,0 +1,122 @@
+/* Estilos para o slider de depoimentos */
+.testimonial-slider .slick-slide > div {
+  padding: 0 15px;
+  height: 100%;
+  display: flex !important;
+  justify-content: center;
+}
+
+.testimonial-slider .slick-list {
+  margin: 0 -15px;
+  padding: 20px 0;
+}
+
+.testimonial-slider .slick-track {
+  display: flex !important;
+  align-items: stretch;
+}
+
+.testimonial-slider .slick-slide {
+  height: auto;
+}
+
+.testimonial-slider .slick-slide > div > div {
+  background-color: #1f2937;
+  border-radius: 0.75rem;
+  padding: 2rem;
+  height: 100%;
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  min-height: 450px; /* Altura mínima para garantir consistência */
+}
+
+.testimonial-slider .slick-slide > div > div:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.testimonial-slider .slick-dots {
+  bottom: -40px;
+}
+
+.testimonial-slider .slick-dots li button:before {
+  color: #f97316;
+  font-size: 12px;
+}
+
+.testimonial-slider .slick-dots li.slick-active button:before {
+  color: #f97316;
+  opacity: 1;
+}
+
+.testimonial-slider .slick-prev:before,
+.testimonial-slider .slick-next:before {
+  color: #f97316;
+  font-size: 24px;
+}
+
+.testimonial-slider .slick-prev {
+  left: -30px;
+  z-index: 1;
+}
+
+.testimonial-slider .slick-next {
+  right: -20px;
+  z-index: 1;
+}
+
+/* Estilo para a imagem do depoente */
+.testimonial-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0 auto 1rem;
+  border: 3px solid #f97316;
+}
+
+/* Estilo para o texto do depoimento */
+.testimonial-text {
+  flex-grow: 1;
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+  color: #e5e7eb;
+}
+
+/* Estilo para o nome do depoente */
+.testimonial-name {
+  font-weight: 600;
+  color: white;
+  margin-bottom: 0.25rem;
+  font-size: 1.125rem;
+}
+
+/* Estilo para o cargo/role do depoente */
+.testimonial-role {
+  color: #f97316;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .testimonial-slider .slick-prev {
+    left: -15px;
+  }
+  
+  .testimonial-slider .slick-next {
+    right: -5px;
+  }
+  
+  .testimonial-slider .slick-slide > div > div {
+    padding: 1.5rem;
+  }
+  
+  .testimonial-text {
+    font-size: 0.9375rem;
+  }
+}

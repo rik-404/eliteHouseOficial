@@ -1,73 +1,103 @@
 
-import React from 'react';
+import React, { useRef } from 'react';
+import Slider from 'react-slick';
+import 'slick-carousel/slick/slick.css';
+import 'slick-carousel/slick/slick-theme.css';
 
 const testimonials = [
   {
-    name: "Marina Silva",
+    name: "Camila Santos",
     role: "Compradora",
-    testimonial: "Encontrar meu apartamento foi muito mais fácil do que eu esperava, graças à equipe da Elite House. Eles entenderam exatamente o que eu estava procurando desde o primeiro dia.",
-    image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=1522&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+    testimonial: "Gostaria de agradecer muito a corretora Yasmin, que me ajudou na compra do meu primeiro apartamento. Eu havia tido uma decepção muito grande com outro profissional, e quando conheci a Yasmin já estava muito frustrada. Tive algumas dificuldades ao longo do caminho, mas seguindo todas as orientações da Yasmin, consegui realizar meu sonho. Fui surpreendida pela paciência, pela dedicação e educação da Yasmin, sempre com muita clareza, tirou todas as minhas dúvidas e me deu todo suporte necessário até mesmo após o contrato assinado. Eu já indiquei e continuo indicando ❤",
+    image: "/images/testimonials/camila-santos.jpg"
   },
   {
-    name: "Rafael Mendes",
-    role: "Investidor",
-    testimonial: "Como investidor imobiliário, valorizo muito a transparência e agilidade. A Elite House superou minhas expectativas em todas as negociações que fizemos nos últimos anos.",
-    image: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=1374&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+    name: "Edivan Carlos da Silva",
+    role: "Comprador",
+    testimonial: "Quero agradecer primeiramente a DEUS por ter me concedido essa benção tão grande em minha vida, me faltam palavras pra expressar tanta alegria por DEUS ter colocado pessoas tão importantes no meu caminho. A Luciana foi maravilhosa, deixou a gente tão seguro de tudo. Também quero agradecer a Cataguá por tudo, por estar com a gente. Nossa sonho da casa própria foi realizado. Foi uma alegria tão grande que não tenho palavras para definir tamanha felicidade. Durante todo o processo de construção, a Elite House sonhou e idealizou junto com a gente cada detalhe do nosso imóvel. Tudo feito com muito profissionalismo.",
+    image: "/images/testimonials/edivan-silva.jpg"
   },
   {
-    name: "Juliana Costa",
-    role: "Vendedora",
-    testimonial: "Vendi meu imóvel em tempo recorde e por um valor acima do que eu esperava. A estratégia de marketing da Elite House foi fundamental para atrair compradores qualificados.",
-    image: "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?q=80&w=1374&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+    name: "Lucas França Siqueira",
+    role: "Comprador",
+    testimonial: "Comprar meu imóvel com o corretor Anderson Siqueira foi uma experiência sensacional. Muito profissional e sabe se comunicar muito bem, fácil de entender o que ele está dizendo, nos passando total confiança na compra do imóvel.",
+    image: "/images/testimonials/lucas-franca.jpg"
+  },
+  {
+    name: "Lucas Henrique Oliveira Monteiro",
+    role: "Comprador",
+    testimonial: "Olá eu sou Lucas, comprei um imóvel recentemente e estou feliz com a aquisição, me passaram o contato do Anderson quando estava à procura de algo que se encaixasse no meu orçamento. Estava passando por algumas simulações a 1 ano e nada chegava em algo bom e assim que entrei em contato com ele tudo foi resolvido bem rápido, me passou confiança, me ajudou a tirar minhas dúvidas e a conquistar meu futuro novo lar. Sou muito grato pelo bom trabalho e desejo muito sucesso para esse profissional incrível.",
+    image: "/images/testimonials/lucas-monteiro.jpg"
   }
 ];
 
 const Testimonials = () => {
+  const sliderRef = useRef<Slider>(null);
+
+  // Configurações do slider
+  const settings = {
+    dots: true,
+    infinite: true,
+    speed: 1000,
+    slidesToShow: 3,
+    slidesToScroll: 1,
+    autoplay: true,
+    autoplaySpeed: 5000,
+    pauseOnHover: true,
+    responsive: [
+      {
+        breakpoint: 1024,
+        settings: {
+          slidesToShow: 2,
+          slidesToScroll: 1,
+          infinite: true,
+          dots: true
+        }
+      },
+      {
+        breakpoint: 768,
+        settings: {
+          slidesToShow: 1,
+          slidesToScroll: 1,
+          initialSlide: 1
+        }
+      }
+    ]
+  };
+
   return (
-    <section className="py-16">
-      <div className="container-custom">
-        <div className="text-center mb-12">
-          <h2 className="section-title">O Que Dizem Nossos Clientes</h2>
-          <p className="section-subtitle">A satisfação de quem realizou o sonho com a Elite House</p>
-        </div>
+    <section className="py-16 bg-black/90 relative">
+      <div className="container mx-auto px-4">
+        <h2 className="text-3xl md:text-4xl font-bold text-center text-white mb-4">
+          O Que Dizem Nossos Clientes
+        </h2>
+        <p className="text-gray-300 text-center mb-12 max-w-2xl mx-auto">
+          A satisfação de quem realizou o sonho com a Elite House
+        </p>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <Slider {...settings} className="testimonial-slider">
           {testimonials.map((testimonial, index) => (
-            <div 
-              key={index} 
-              className="bg-black p-6 rounded-lg border border-muted hover:border-eliteOrange transition-all duration-300 flex flex-col animate-slide-in"
-              style={{ animationDelay: `${index * 150}ms` }}
-            >
-              <div className="mb-6">
-                <svg 
-                  className="h-8 w-8 text-eliteOrange/50" 
-                  fill="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
-                </svg>
-              </div>
-              
-              <blockquote className="text-white mb-6 flex-grow">
-                "{testimonial.testimonial}"
-              </blockquote>
-              
-              <div className="flex items-center mt-4">
-                <div className="h-10 w-10 rounded-full overflow-hidden mr-4">
-                  <img 
-                    src={testimonial.image} 
-                    alt={testimonial.name}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <div>
-                  <div className="text-white font-medium">{testimonial.name}</div>
-                  <div className="text-sm text-gray-400">{testimonial.role}</div>
+            <div key={index}>
+              <div className="h-full flex flex-col items-center justify-center">
+                <img 
+                  src={testimonial.image} 
+                  alt={testimonial.name} 
+                  className="testimonial-image"
+                  onError={(e) => {
+                    // Fallback para imagem quebrada
+                    const target = e.target as HTMLImageElement;
+                    target.src = '/images/placeholder-user.jpg';
+                  }}
+                />
+                <p className="testimonial-text text-center">"{testimonial.testimonial}"</p>
+                <div className="mt-auto">
+                  <h4 className="testimonial-name">{testimonial.name}</h4>
+                  <p className="testimonial-role">{testimonial.role}</p>
                 </div>
               </div>
             </div>
           ))}
-        </div>
+        </Slider>
       </div>
     </section>
   );

@@ -845,7 +845,15 @@ const Clients = () => {
           <Button
             variant="default"
             className="bg-orange-500 hover:bg-orange-600 text-white flex items-center gap-2 dark:bg-orange-600 dark:hover:bg-orange-700"
-            onClick={() => setIsKanbanView(!isKanbanView)}
+            onClick={() => {
+              // Redefine os filtros para 'todos' ao alternar para a visualização Kanban
+              if (!isKanbanView) {
+                setSelectedStatus(null);
+                setSelectedBroker('all');
+                navigate('/admin/clients');
+              }
+              setIsKanbanView(!isKanbanView);
+            }}
             disabled={selectedStatus === 'pending'}
           >
             {isKanbanView ? 'Ver Lista' : 'Ver Kanban'}
